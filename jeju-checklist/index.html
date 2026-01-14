@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>제주 4박5일 | 신생아 동반 체크리스트</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --card:#121826;
+      --muted:#9aa4b2;
+      --text:#e5e7eb;
+      --accent:#60a5fa;
+      --line:#243044;
+      --soft: rgba(255,255,255,.03);
+      --ok: rgba(52,211,153,.9);
+      --warn: rgba(251,191,36,.95);
+      --danger: rgba(251,113,133,.95);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(96,165,250,.25), transparent 55%),
+                  radial-gradient(900px 500px at 90% 0%, rgba(52,211,153,.18), transparent 50%),
+                  var(--bg);
+      color:var(--text);
+    }
+    header{padding:28px 16px 10px; max-width: 980px; margin: 0 auto;}
+    h1{margin:0 0 6px 0; font-size: 22px; letter-spacing: -0.2px;}
+    .sub{margin:0; color:var(--muted); font-size: 13px; line-height: 1.5;}
+    .sync-status{
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; padding: 4px 10px; border-radius: 999px;
+      background: rgba(52,211,153,.15); color: rgba(110,231,183,.95);
+      border: 1px solid rgba(52,211,153,.3);
+    }
+    .sync-status.offline{
+      background: rgba(251,113,133,.15); color: rgba(253,164,175,.95);
+      border-color: rgba(251,113,133,.3);
+    }
+    .sync-dot{width:8px;height:8px;border-radius:50%;background:currentColor;}
+    .toolbar{margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+    button{
+      border:1px solid var(--line);
+      background: var(--soft);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-size: 13px;
+    }
+    button:hover{border-color: rgba(96,165,250,.6)}
+    .pill{
+      font-size: 12px; padding:6px 10px; border-radius:999px;
+      border:1px solid var(--line); background: var(--soft); color: var(--muted);
+    }
+    .wrap{
+      max-width: 980px; margin: 0 auto; padding: 12px 16px 40px;
+      display:grid; grid-template-columns: 1fr; gap: 14px;
+    }
+    @media (min-width: 900px){
+      .wrap{grid-template-columns: 1fr 1fr;}
+      .full{grid-column: 1 / -1;}
+    }
+    .card{
+      background: rgba(18,24,38,.92);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px 14px 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .card h2{
+      margin:0 0 8px 0; font-size: 16px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .meta{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+    .tag{
+      font-size: 11px; padding: 4px 8px; border-radius: 999px;
+      border: 1px solid var(--line); color: var(--muted); background: rgba(255,255,255,.02);
+    }
+    .tag.accent{border-color: rgba(96,165,250,.55); color: rgba(147,197,253,.95)}
+    .tag.ok{border-color: rgba(52,211,153,.55); color: rgba(110,231,183,.95)}
+    .tag.warn{border-color: rgba(251,191,36,.55); color: rgba(253,230,138,.95)}
+    .tag.danger{border-color: rgba(251,113,133,.55); color: rgba(253,164,175,.95)}
+    .section{border-top: 1px dashed rgba(154,164,178,.22); padding-top: 10px; margin-top: 10px;}
+    .section h3{margin:0 0 8px 0; font-size: 13px; color: rgba(229,231,235,.92); letter-spacing: -0.1px;}
+    ul{list-style:none; padding:0; margin:0}
+    li{display:flex; gap:10px; align-items:flex-start; padding:8px 6px; border-radius: 12px;}
+    li:hover{background: rgba(255,255,255,.03)}
+    input[type="checkbox"]{
+      margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent);
+      flex: 0 0 auto; cursor:pointer;
+    }
+    .item{flex:1 1 auto; display:flex; flex-direction:column; gap:3px; line-height:1.35;}
+    .name{font-size: 13px; color: var(--text);}
+    .note{font-size: 12px; color: var(--muted);}
+    .hint{margin-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.6;}
+    .progress{
+      font-size: 12px; color: var(--muted);
+      display:flex; align-items:center; gap:8px; white-space:nowrap;
+    }
+    .bar{
+      width: 120px; height: 8px; background: rgba(255,255,255,.06);
+      border:1px solid rgba(154,164,178,.18); border-radius:999px; overflow:hidden;
+    }
+    .fill{height:100%; width:0%; background: linear-gradient(90deg, rgba(96,165,250,.95), rgba(52,211,153,.85));}
+    .tiny{font-size:11px; color: var(--muted); margin:10px 0 0;}
+    .addbox{
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(154,164,178,.18);
+      background: rgba(255,255,255,.02);
+    }
+    .addgrid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 700px){
+      .addgrid{grid-template-columns: 1.2fr 1fr 1fr auto;}
+    }
+    .field{display:flex; flex-direction:column; gap:6px;}
+    label{font-size: 11px; color: var(--muted);}
+    input[type="text"], select{
+      width:100%;
+      padding:10px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(154,164,178,.22);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      outline: none;
+      font-size: 13px;
+    }
+    input[type="text"]::placeholder{color: rgba(154,164,178,.6)}
+    .btn-primary{border-color: rgba(96,165,250,.7); background: rgba(96,165,250,.18);}
+    .btn-danger{border-color: rgba(251,113,133,.65); background: rgba(251,113,133,.14);}
+    .btn-edit{border-color: rgba(251,191,36,.65); background: rgba(251,191,36,.14);}
+    .row-actions{display:flex; gap:6px; align-items:center; margin-left:auto;}
+    .iconbtn{padding:6px 8px; font-size:11px; border-radius: 8px;}
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(154,164,178,.22);
+      background: rgba(18,24,38,.96);
+      color: var(--text);
+      font-size: 12px;
+      opacity: 0;
+      pointer-events:none;
+      transition: opacity .18s ease;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      z-index: 1000;
+    }
+    .toast.show{opacity: 1;}
+    .modal-overlay{
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 16px;
+    }
+    .modal-overlay.show{display: flex;}
+    .modal{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.5);
+    }
+    .modal h3{margin: 0 0 16px 0; font-size: 16px;}
+    .modal .field{margin-bottom: 12px;}
+    .modal-actions{display: flex; gap: 10px; margin-top: 16px;}
+    .modal-actions button{flex: 1;}
+    @media print{
+      body{background:#fff; color:#111827}
+      .card{background:#fff; border-color:#e5e7eb; box-shadow:none}
+      button,.sync-status{display:none}
+      .pill{border-color:#e5e7eb; color:#374151; background:#fff}
+      .tag{border-color:#e5e7eb; color:#374151}
+      .name{color:#111827}
+      .note,.sub,.hint,.progress,.tiny,label{color:#374151}
+      input[type="checkbox"]{accent-color:#111827}
+      .addbox{display:none}
+      .toast,.modal-overlay{display:none}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>제주 4박 5일 | 신생아 동반 체크리스트</h1>
+    <p class="sub">
+      비행기 + 렌터카 + 호텔 / 보호자 2인 기준.<br>
+      <span class="sync-status" id="syncStatus"><span class="sync-dot"></span> 실시간 동기화 연결 중...</span>
+    </p>
+    <div class="toolbar">
+      <button type="button" onclick="checkAll(true)">전체 체크</button>
+      <button type="button" onclick="checkAll(false)">전체 해제</button>
+      <button type="button" onclick="window.print()">🖨️ 인쇄</button>
+      <span class="pill" id="overall">진행률 계산 중…</span>
+    </div>
+    <p class="tiny">※ 체크하면 자동으로 상대방 폰에도 반영됩니다!</p>
+  </header>
+
+  <main class="wrap">
+    <section class="card full" data-card="custom_add">
+      <h2>➕ 준비물 추가 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">—</span></span></h2>
+      <div class="meta">
+        <span class="tag accent">커스텀</span>
+        <span class="tag ok">추가/수정/삭제 가능</span>
+      </div>
+      <div class="addbox">
+        <div class="addgrid">
+          <div class="field">
+            <label for="add_name">추가할 물건</label>
+            <input id="add_name" type="text" placeholder="예: 여벌 신발끈, 멀티탭…" />
+          </div>
+          <div class="field">
+            <label for="add_note">메모(선택)</label>
+            <input id="add_note" type="text" placeholder="예: 호텔에서 필요" />
+          </div>
+          <div class="field">
+            <label for="add_category">카테고리</label>
+            <select id="add_category">
+              <option value="custom_baby">아기 | 추가</option>
+              <option value="custom_mom">엄마 | 추가</option>
+              <option value="custom_dad">아빠 | 추가</option>
+              <option value="custom_shared">공용 | 추가</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn-primary" type="button" onclick="addCustomItem()">추가</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" data-card="custom_baby">
+      <h2>🧷 아기 | 내가 추가 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <div class="meta"><span class="tag accent">커스텀</span></div>
+      <ul id="list_custom_baby"></ul>
+      <p class="hint" id="empty_custom_baby">아직 추가한 항목이 없어요.</p>
+    </section>
+
+    <section class="card" data-card="custom_mom">
+      <h2>🧷 엄마 | 내가 추가 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <div class="meta"><span class="tag accent">커스텀</span></div>
+      <ul id="list_custom_mom"></ul>
+      <p class="hint" id="empty_custom_mom">아직 추가한 항목이 없어요.</p>
+    </section>
+
+    <section class="card" data-card="custom_dad">
+      <h2>🧷 아빠 | 내가 추가 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <div class="meta"><span class="tag accent">커스텀</span></div>
+      <ul id="list_custom_dad"></ul>
+      <p class="hint" id="empty_custom_dad">아직 추가한 항목이 없어요.</p>
+    </section>
+
+    <section class="card" data-card="custom_shared">
+      <h2>🧷 공용 | 내가 추가 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <div class="meta"><span class="tag accent">커스텀</span></div>
+      <ul id="list_custom_shared"></ul>
+      <p class="hint" id="empty_custom_shared">아직 추가한 항목이 없어요.</p>
+    </section>
+
+    <!-- 기내 반입 -->
+    <section class="card full" data-card="carry">
+      <h2>✈️ 기내 반입(즉시 대응 키트) <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <div class="meta"><span class="tag accent">우선순위 최상</span><span class="tag warn">즉시 대응</span></div>
+      <div class="section">
+        <h3>아기</h3>
+        <ul>
+          <li><input type="checkbox" data-key="carry_baby_diaper"><div class="item"><div class="name">기저귀 (기내용 6~10개)</div><div class="note">지연/환승 대비</div></div></li>
+          <li><input type="checkbox" data-key="carry_baby_wipes"><div class="item"><div class="name">휴대용 물티슈 2~3팩 + 휴지</div><div class="note">손/얼굴/기저귀</div></div></li>
+          <li><input type="checkbox" data-key="carry_baby_change"><div class="item"><div class="name">여벌 옷 1세트 + 속싸개/담요 1</div><div class="note">토/역류/누수</div></div></li>
+          <li><input type="checkbox" data-key="carry_baby_pad"><div class="item"><div class="name">기저귀 교환 패드(깔개)</div><div class="note">기내/공항</div></div></li>
+          <li><input type="checkbox" data-key="carry_baby_toys"><div class="item"><div class="name">흡착 장난감 1 + 헝겊책 1 + 치발기</div><div class="note">짧고 확실한 3종</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>부모</h3>
+        <ul>
+          <li><input type="checkbox" data-key="carry_id"><div class="item"><div class="name">신분증/면허증/카드</div><div class="note">렌터카 인수까지</div></div></li>
+          <li><input type="checkbox" data-key="carry_charger"><div class="item"><div class="name">충전기 + 보조배터리</div><div class="note">사진/지도/업무</div></div></li>
+          <li><input type="checkbox" data-key="carry_parent_change"><div class="item"><div class="name">부모 여벌 티셔츠 1(각 1) + 지퍼백</div><div class="note">아기 사고 대비</div></div></li>
+          <li><input type="checkbox" data-key="carry_sanitizer"><div class="item"><div class="name">손소독제/휴대용 손워시</div><div class="note">접촉 많을 때</div></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 아기 의류 -->
+    <section class="card" data-card="baby_clothes">
+      <h2>👶 아기 | 의류 & 기저귀 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <div class="section">
+        <h3>기저귀</h3>
+        <ul>
+          <li><input type="checkbox" data-key="baby_day_diaper"><div class="item"><div class="name">낮 기저귀 새거 1팩</div><div class="note">부피 크면 현지 조달</div></div></li>
+          <li><input type="checkbox" data-key="baby_night_diaper"><div class="item"><div class="name">밤 기저귀 8개</div><div class="note">흡수력 좋은 걸로</div></div></li>
+          <li><input type="checkbox" data-key="baby_swim_diaper"><div class="item"><div class="name">방수/수영용 기저귀</div><div class="note">물놀이 일정 있을 때</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>옷/잡화</h3>
+        <ul>
+          <li><input type="checkbox" data-key="baby_inner"><div class="item"><div class="name">내복</div><div class="note">여벌 2~3</div></div></li>
+          <li><input type="checkbox" data-key="baby_pajama"><div class="item"><div class="name">잠옷</div><div class="note">수면 중 땀/침 대비</div></div></li>
+          <li><input type="checkbox" data-key="baby_outer"><div class="item"><div class="name">겉옷</div><div class="note">제주 바람 대비</div></div></li>
+          <li><input type="checkbox" data-key="baby_hat_socks"><div class="item"><div class="name">모자, 양말</div><div class="note">체온 유지용</div></div></li>
+          <li><input type="checkbox" data-key="baby_swimsuit"><div class="item"><div class="name">수영복</div><div class="note">온수풀/스파 일정 시</div></div></li>
+          <li><input type="checkbox" data-key="baby_bib_cloth"><div class="item"><div class="name">턱받이(천)</div><div class="note">세탁 대비 3~5장</div></div></li>
+          <li><input type="checkbox" data-key="baby_cloths"><div class="item"><div class="name">손수건</div><div class="note">넉넉히</div></div></li>
+          <li><input type="checkbox" data-key="baby_swaddle"><div class="item"><div class="name">속싸개</div><div class="note">수면/안정/체온</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>세탁</h3>
+        <ul>
+          <li><input type="checkbox" data-key="baby_laundry_net"><div class="item"><div class="name">세탁망</div><div class="note">호텔 세탁/손빨래</div></div></li>
+          <li><input type="checkbox" data-key="baby_detergent"><div class="item"><div class="name">세탁세제</div><div class="note">소분 추천</div></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 아기 식 -->
+    <section class="card" data-card="baby_food">
+      <h2>🍼 아기 | 이유식 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <div class="section">
+        <h3>음식</h3>
+        <ul>
+          <li><input type="checkbox" data-key="baby_food_packs"><div class="item"><div class="name">실온 이유식 5팩</div><div class="note">여분 1~2팩 추가</div></div></li>
+          <li><input type="checkbox" data-key="baby_snack"><div class="item"><div class="name">떡뻥(휴대)</div><div class="note">차/비행기에서 유용</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>도구</h3>
+        <ul>
+          <li><input type="checkbox" data-key="baby_spoon_case"><div class="item"><div class="name">숟가락 + 케이스</div><div class="note">외식/이동</div></div></li>
+          <li><input type="checkbox" data-key="baby_strawcup"><div class="item"><div class="name">빨대컵</div><div class="note">누수 적게</div></div></li>
+          <li><input type="checkbox" data-key="baby_bib_silicone"><div class="item"><div class="name">턱받이(실리콘/일회용)</div><div class="note">외출은 일회용 편함</div></div></li>
+          <li><input type="checkbox" data-key="baby_thermos"><div class="item"><div class="name">보온병</div><div class="note">따뜻한 물</div></div></li>
+          <li><input type="checkbox" data-key="baby_pot"><div class="item"><div class="name">전기포트</div><div class="note">호텔 비치 불확실 시</div></div></li>
+          <li><input type="checkbox" data-key="baby_dishkit"><div class="item"><div class="name">설거지(수세미/세제/빨대솔)</div><div class="note">소분 추천</div></div></li>
+          <li><input type="checkbox" data-key="baby_food_bag"><div class="item"><div class="name">이유식용 가방</div><div class="note">보냉백이면 좋음</div></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 아기 놀기 -->
+    <section class="card" data-card="baby_play">
+      <h2>🧸 아기 | 놀기 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <ul>
+        <li><input type="checkbox" data-key="baby_cloth_book"><div class="item"><div class="name">헝겊책(휴대)</div><div class="note">소리/촉감 요소</div></div></li>
+        <li><input type="checkbox" data-key="baby_tulip"><div class="item"><div class="name">튤립시리즈</div><div class="note">최애 아이템</div></div></li>
+        <li><input type="checkbox" data-key="baby_dolls"><div class="item"><div class="name">작은 인형들</div><div class="note">2개만 선택</div></div></li>
+        <li><input type="checkbox" data-key="baby_teether"><div class="item"><div class="name">실리콘 스트랩 + 치발기</div><div class="note">분실 방지</div></div></li>
+        <li><input type="checkbox" data-key="baby_suction_toy"><div class="item"><div class="name">비행기용 흡착장난감</div><div class="note">기내용</div></div></li>
+        <li><input type="checkbox" data-key="baby_tube"><div class="item"><div class="name">튜브</div><div class="note">계획 있을 때만</div></div></li>
+      </ul>
+    </section>
+
+    <!-- 아기 씻기 -->
+    <section class="card" data-card="baby_wash">
+      <h2>🛁 아기 | 씻기 & 위생 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <ul>
+        <li><input type="checkbox" data-key="baby_bodywash"><div class="item"><div class="name">바디워시</div><div class="note">소분하면 가벼움</div></div></li>
+        <li><input type="checkbox" data-key="baby_tub_cleaner"><div class="item"><div class="name">욕조클리너</div><div class="note">욕조 사용 시</div></div></li>
+        <li><input type="checkbox" data-key="baby_tooth"><div class="item"><div class="name">칫솔/치약</div><div class="note">필요 시</div></div></li>
+        <li><input type="checkbox" data-key="baby_steril_bowl"><div class="item"><div class="name">소독용유리그릇</div><div class="note">열탕 소독</div></div></li>
+        <li><input type="checkbox" data-key="baby_bumbo"><div class="item"><div class="name">범보의자</div><div class="note">호텔방에서 잠깐</div></div></li>
+        <li><input type="checkbox" data-key="baby_lotion"><div class="item"><div class="name">로션</div><div class="note">건조/바람</div></div></li>
+        <li><input type="checkbox" data-key="baby_cleanser"><div class="item"><div class="name">엉덩이클렌저 소분</div><div class="note">휴대용</div></div></li>
+      </ul>
+    </section>
+
+    <!-- 아기 자기/외출 -->
+    <section class="card" data-card="baby_sleep">
+      <h2>🌙 아기 | 자기/외출 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <div class="section">
+        <h3>수면</h3>
+        <ul>
+          <li><input type="checkbox" data-key="baby_mat"><div class="item"><div class="name">깔것 1</div><div class="note">눕힘/교환용</div></div></li>
+          <li><input type="checkbox" data-key="baby_blanket"><div class="item"><div class="name">담요(또는 큰 수건)</div><div class="note">온도차 대비</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>이동</h3>
+        <ul>
+          <li><input type="checkbox" data-key="baby_stroller"><div class="item"><div class="name">유모차(커버/케이스)</div><div class="note">트렁크 공간 체크</div></div></li>
+          <li><input type="checkbox" data-key="baby_wipes_big"><div class="item"><div class="name">물티슈 큰거 1통</div><div class="note">메인 재고</div></div></li>
+          <li><input type="checkbox" data-key="baby_wipes_small"><div class="item"><div class="name">물티슈 휴대용 3개</div><div class="note">외출 가방</div></div></li>
+          <li><input type="checkbox" data-key="baby_handwash"><div class="item"><div class="name">핸드워시(휴대)</div><div class="note">외출 시</div></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 아기 상비약 -->
+    <section class="card" data-card="baby_meds">
+      <h2>🧰 아기 | 상비약 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <ul>
+        <li><input type="checkbox" data-key="meds_physio"><div class="item"><div class="name">피지오머 소분</div><div class="note">코막힘 대비</div></div></li>
+        <li><input type="checkbox" data-key="meds_cotton"><div class="item"><div class="name">면봉</div><div class="note">위생/케어</div></div></li>
+        <li><input type="checkbox" data-key="meds_bepanthen"><div class="item"><div class="name">비판텐</div><div class="note">발진/자극</div></div></li>
+        <li><input type="checkbox" data-key="meds_fever"><div class="item"><div class="name">해열제</div><div class="note">비상용</div></div></li>
+      </ul>
+    </section>
+
+    <!-- 엄마 -->
+    <section class="card" data-card="mom">
+      <h2>👩 엄마 | 여행 기본 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <div class="section">
+        <h3>속옷/양말(5일 + 예비)</h3>
+        <ul>
+          <li><input type="checkbox" data-key="mom_underwear"><div class="item"><div class="name">팬티 6~7장</div><div class="note">교체 잦음</div></div></li>
+          <li><input type="checkbox" data-key="mom_bra"><div class="item"><div class="name">브라 2~3개 (수유브라)</div><div class="note">땀/유즙/세탁</div></div></li>
+          <li><input type="checkbox" data-key="mom_socks"><div class="item"><div class="name">양말 6켤레</div><div class="note">실내·외출</div></div></li>
+          <li><input type="checkbox" data-key="mom_pads"><div class="item"><div class="name">수유패드(일회용)</div><div class="note">새는 날 대비</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>의류</h3>
+        <ul>
+          <li><input type="checkbox" data-key="mom_tops"><div class="item"><div class="name">상의 4~5벌</div><div class="note">수유/안기 편한 옷</div></div></li>
+          <li><input type="checkbox" data-key="mom_bottoms"><div class="item"><div class="name">하의 2~3벌</div><div class="note">운전/유모차</div></div></li>
+          <li><input type="checkbox" data-key="mom_sleepwear"><div class="item"><div class="name">잠옷 2벌</div><div class="note">밤 수유</div></div></li>
+          <li><input type="checkbox" data-key="mom_outer"><div class="item"><div class="name">가디건/바람막이 1</div><div class="note">제주 바람</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>세면/화장품</h3>
+        <ul>
+          <li><input type="checkbox" data-key="mom_skincare"><div class="item"><div class="name">스킨케어</div><div class="note">소분</div></div></li>
+          <li><input type="checkbox" data-key="mom_sunscreen"><div class="item"><div class="name">선크림</div><div class="note">유모차 산책</div></div></li>
+          <li><input type="checkbox" data-key="mom_cleanser"><div class="item"><div class="name">클렌징</div><div class="note">밤 체력 절약</div></div></li>
+          <li><input type="checkbox" data-key="mom_lipbalm"><div class="item"><div class="name">립밤</div><div class="note">바람</div></div></li>
+          <li><input type="checkbox" data-key="mom_hairtie"><div class="item"><div class="name">머리끈/집게핀</div><div class="note">필수</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>수유/회복</h3>
+        <ul>
+          <li><input type="checkbox" data-key="mom_nursing_cover"><div class="item"><div class="name">수유커버</div><div class="note">외부 수유</div></div></li>
+          <li><input type="checkbox" data-key="mom_wrist_guard"><div class="item"><div class="name">손목 보호대</div><div class="note">부담 완화</div></div></li>
+          <li><input type="checkbox" data-key="mom_waterbottle"><div class="item"><div class="name">텀블러/물병</div><div class="note">갈증 대비</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>개인 위생/상비</h3>
+        <ul>
+          <li><input type="checkbox" data-key="mom_meds"><div class="item"><div class="name">개인 상비약</div><div class="note">두통/소화</div></div></li>
+          <li><input type="checkbox" data-key="mom_sanitary"><div class="item"><div class="name">생리대/라이너</div><div class="note">필요 시</div></div></li>
+          <li><input type="checkbox" data-key="mom_mask"><div class="item"><div class="name">마스크</div><div class="note">비행기/실내</div></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 아빠 -->
+    <section class="card" data-card="dad">
+      <h2>👨 아빠 | 여행 기본 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <div class="section">
+        <h3>속옷/양말(5일 + 예비)</h3>
+        <ul>
+          <li><input type="checkbox" data-key="dad_underwear"><div class="item"><div class="name">팬티 6~7장</div><div class="note">여유</div></div></li>
+          <li><input type="checkbox" data-key="dad_socks"><div class="item"><div class="name">양말 6켤레</div><div class="note">운전/외출</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>의류</h3>
+        <ul>
+          <li><input type="checkbox" data-key="dad_tops"><div class="item"><div class="name">상의 4~5벌</div><div class="note">미팅 있으면 셔츠</div></div></li>
+          <li><input type="checkbox" data-key="dad_bottoms"><div class="item"><div class="name">하의 2~3벌</div><div class="note">운전 편한 바지</div></div></li>
+          <li><input type="checkbox" data-key="dad_sleepwear"><div class="item"><div class="name">잠옷 1~2벌</div><div class="note">숙면</div></div></li>
+          <li><input type="checkbox" data-key="dad_outer"><div class="item"><div class="name">바람막이/후드 1</div><div class="note">제주 바람</div></div></li>
+          <li><input type="checkbox" data-key="dad_shoes"><div class="item"><div class="name">편한 신발 1</div><div class="note">이동</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>세면/위생</h3>
+        <ul>
+          <li><input type="checkbox" data-key="dad_toiletries"><div class="item"><div class="name">칫솔/치약/면도기</div><div class="note">기본</div></div></li>
+          <li><input type="checkbox" data-key="dad_lotion"><div class="item"><div class="name">로션/립밤</div><div class="note">건조</div></div></li>
+          <li><input type="checkbox" data-key="dad_sunscreen"><div class="item"><div class="name">선크림</div><div class="note">야외</div></div></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>역할 특화</h3>
+        <ul>
+          <li><input type="checkbox" data-key="dad_license"><div class="item"><div class="name">운전면허증</div><div class="note">렌터카</div></div></li>
+          <li><input type="checkbox" data-key="dad_crossbag"><div class="item"><div class="name">크로스백/허리팩</div><div class="note">즉시 대응용</div></div></li>
+          <li><input type="checkbox" data-key="dad_sunglasses"><div class="item"><div class="name">선글라스</div><div class="note">운전</div></div></li>
+          <li><input type="checkbox" data-key="dad_hat"><div class="item"><div class="name">모자</div><div class="note">햇빛</div></div></li>
+          <li><input type="checkbox" data-key="dad_patches"><div class="item"><div class="name">파스/근육통 패치</div><div class="note">허리/어깨</div></div></li>
+          <li><input type="checkbox" data-key="dad_snacks"><div class="item"><div class="name">간단 간식</div><div class="note">타이밍</div></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 공용 출장 -->
+    <section class="card full" data-card="work">
+      <h2>💼 공용 | 출장/전자 <span class="progress"><span class="bar"><span class="fill"></span></span><span class="pct">0%</span></span></h2>
+      <ul>
+        <li><input type="checkbox" data-key="work_laptop"><div class="item"><div class="name">노트북/충전기</div><div class="note">업무</div></div></li>
+        <li><input type="checkbox" data-key="work_docs"><div class="item"><div class="name">출장 서류/명함/필기구</div><div class="note">고정 위치</div></div></li>
+        <li><input type="checkbox" data-key="work_adapter"><div class="item"><div class="name">멀티탭/어댑터</div><div class="note">포트 부족</div></div></li>
+      </ul>
+    </section>
+  </main>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <h3>✏️ 항목 수정</h3>
+      <div class="field">
+        <label>이름</label>
+        <input type="text" id="edit_name" />
+      </div>
+      <div class="field">
+        <label>메모</label>
+        <input type="text" id="edit_note" />
+      </div>
+      <div class="field">
+        <label>카테고리</label>
+        <select id="edit_category">
+          <option value="custom_baby">아기 | 추가</option>
+          <option value="custom_mom">엄마 | 추가</option>
+          <option value="custom_dad">아빠 | 추가</option>
+          <option value="custom_shared">공용 | 추가</option>
+        </select>
+      </div>
+      <input type="hidden" id="edit_id" />
+      <div class="modal-actions">
+        <button type="button" onclick="closeEditModal()">취소</button>
+        <button type="button" class="btn-primary" onclick="saveEdit()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">저장했어요</div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBJD5-euVt9RWJiXIRbWyPo9d_cIeeESMo",
+      authDomain: "webanything-466f5.firebaseapp.com",
+      databaseURL: "https://webanything-466f5-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "webanything-466f5",
+      storageBucket: "webanything-466f5.firebasestorage.app",
+      messagingSenderId: "60644884106",
+      appId: "1:60644884106:web:fa2497dc1854b67ea1b773"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const checklistRef = db.ref('checklist');
+    const customRef = db.ref('custom');
+
+    let isOnline = false;
+    let isSyncing = false;
+
+    // Sync Status UI
+    function updateSyncStatus(online) {
+      isOnline = online;
+      const el = document.getElementById('syncStatus');
+      if (online) {
+        el.innerHTML = '<span class="sync-dot"></span> 실시간 동기화 중';
+        el.classList.remove('offline');
+      } else {
+        el.innerHTML = '<span class="sync-dot"></span> 오프라인';
+        el.classList.add('offline');
+      }
+    }
+
+    // Toast
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 1500);
+    }
+
+    // Get all checkboxes
+    function getAllCheckboxes() {
+      return Array.from(document.querySelectorAll('input[type="checkbox"][data-key]'));
+    }
+
+    // Escape HTML
+    function escapeHtml(s) {
+      return (s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    // ========== FIREBASE SYNC ==========
+
+    // Save checkbox state to Firebase
+    function saveCheckboxToFirebase(key, checked) {
+      if (!isOnline) return;
+      checklistRef.child(key).set(checked);
+    }
+
+    // Load and listen to checkbox states from Firebase
+    function listenToCheckboxes() {
+      checklistRef.on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        isSyncing = true;
+        getAllCheckboxes().forEach(cb => {
+          cb.checked = !!data[cb.dataset.key];
+        });
+        isSyncing = false;
+        updateOverall();
+      });
+    }
+
+    // Save custom items to Firebase
+    function saveCustomToFirebase(items) {
+      if (!isOnline) return;
+      customRef.set(items);
+    }
+
+    // Listen to custom items from Firebase
+    function listenToCustom() {
+      customRef.on('value', (snapshot) => {
+        const items = snapshot.val() || [];
+        isSyncing = true;
+        renderCustomItems(Array.isArray(items) ? items : Object.values(items));
+        isSyncing = false;
+        updateOverall();
+      });
+    }
+
+    // ========== CUSTOM ITEMS ==========
+
+    function renderCustomItems(items) {
+      const byCat = { custom_baby: [], custom_mom: [], custom_dad: [], custom_shared: [] };
+      items.forEach(it => { if (byCat[it.category]) byCat[it.category].push(it); });
+
+      Object.keys(byCat).forEach(cat => {
+        const ul = document.getElementById("list_" + cat);
+        const empty = document.getElementById("empty_" + cat);
+        ul.innerHTML = "";
+        if (byCat[cat].length === 0) { empty.style.display = "block"; return; }
+        empty.style.display = "none";
+
+        byCat[cat].forEach(it => {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <input type="checkbox" ${it.checked ? "checked" : ""} data-custom-id="${escapeHtml(it.id)}">
+            <div class="item">
+              <div class="name">${escapeHtml(it.name)}</div>
+              ${it.note ? `<div class="note">${escapeHtml(it.note)}</div>` : ``}
+            </div>
+            <div class="row-actions">
+              <button class="iconbtn btn-edit" type="button" data-edit-id="${escapeHtml(it.id)}">수정</button>
+              <button class="iconbtn btn-danger" type="button" data-del-id="${escapeHtml(it.id)}">삭제</button>
+            </div>
+          `;
+          ul.appendChild(li);
+        });
+      });
+
+      // Bind custom checkbox listeners
+      document.querySelectorAll('input[type="checkbox"][data-custom-id]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          if (isSyncing) return;
+          const id = cb.getAttribute('data-custom-id');
+          customRef.once('value').then(snapshot => {
+            let items = snapshot.val() || [];
+            if (!Array.isArray(items)) items = Object.values(items);
+            const idx = items.findIndex(x => x.id === id);
+            if (idx >= 0) {
+              items[idx].checked = cb.checked;
+              saveCustomToFirebase(items);
+            }
+          });
+        });
+      });
+
+      // Bind delete listeners
+      document.querySelectorAll('button[data-del-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!confirm('삭제할까요?')) return;
+          const id = btn.getAttribute('data-del-id');
+          customRef.once('value').then(snapshot => {
+            let items = snapshot.val() || [];
+            if (!Array.isArray(items)) items = Object.values(items);
+            items = items.filter(x => x.id !== id);
+            saveCustomToFirebase(items);
+            toast("삭제했어요");
+          });
+        });
+      });
+
+      // Bind edit listeners
+      document.querySelectorAll('button[data-edit-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-edit-id');
+          openEditModal(id);
+        });
+      });
+    }
+
+    function addCustomItem() {
+      const name = document.getElementById('add_name').value.trim();
+      const note = document.getElementById('add_note').value.trim();
+      const category = document.getElementById('add_category').value;
+
+      if (!name) { toast("이름을 입력해줘"); return; }
+
+      const id = "c_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
+      const newItem = { id, category, name, note, checked: false };
+
+      customRef.once('value').then(snapshot => {
+        let items = snapshot.val() || [];
+        if (!Array.isArray(items)) items = Object.values(items);
+        items.unshift(newItem);
+        saveCustomToFirebase(items);
+        toast("추가했어요");
+      });
+
+      document.getElementById('add_name').value = "";
+      document.getElementById('add_note').value = "";
+    }
+
+    // Edit Modal
+    function openEditModal(id) {
+      customRef.once('value').then(snapshot => {
+        let items = snapshot.val() || [];
+        if (!Array.isArray(items)) items = Object.values(items);
+        const item = items.find(x => x.id === id);
+        if (!item) return;
+
+        document.getElementById('edit_id').value = id;
+        document.getElementById('edit_name').value = item.name;
+        document.getElementById('edit_note').value = item.note || '';
+        document.getElementById('edit_category').value = item.category;
+        document.getElementById('editModal').classList.add('show');
+      });
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('show');
+    }
+
+    function saveEdit() {
+      const id = document.getElementById('edit_id').value;
+      const name = document.getElementById('edit_name').value.trim();
+      const note = document.getElementById('edit_note').value.trim();
+      const category = document.getElementById('edit_category').value;
+
+      if (!name) { toast("이름을 입력해줘"); return; }
+
+      customRef.once('value').then(snapshot => {
+        let items = snapshot.val() || [];
+        if (!Array.isArray(items)) items = Object.values(items);
+        const idx = items.findIndex(x => x.id === id);
+        if (idx >= 0) {
+          items[idx].name = name;
+          items[idx].note = note;
+          items[idx].category = category;
+          saveCustomToFirebase(items);
+          toast("수정했어요");
+        }
+      });
+      closeEditModal();
+    }
+
+    // ========== PROGRESS ==========
+
+    function updateCardProgress(card) {
+      if (card.getAttribute('data-card') === 'custom_add') {
+        const pct = card.querySelector('.pct');
+        const fill = card.querySelector('.fill');
+        if (pct) pct.textContent = "—";
+        if (fill) fill.style.width = "0%";
+        return { done: 0, total: 0 };
+      }
+      const cbs = Array.from(card.querySelectorAll('input[type="checkbox"][data-key], input[type="checkbox"][data-custom-id]'));
+      const done = cbs.filter(x => x.checked).length;
+      const total = cbs.length || 1;
+      const pct = Math.round((done / total) * 100);
+      const pctEl = card.querySelector('.pct');
+      const fillEl = card.querySelector('.fill');
+      if (pctEl) pctEl.textContent = total > 0 ? pct + "%" : "0%";
+      if (fillEl) fillEl.style.width = pct + "%";
+      return { done, total };
+    }
+
+    function updateOverall() {
+      const cards = Array.from(document.querySelectorAll('[data-card]'));
+      let done = 0, total = 0;
+      cards.forEach(card => { const r = updateCardProgress(card); done += r.done; total += r.total; });
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      document.getElementById('overall').textContent = `전체 ${pct}% (${done}/${total})`;
+    }
+
+    // ========== CHECKBOX BINDING ==========
+
+    function bindBuiltInCheckboxes() {
+      getAllCheckboxes().forEach(cb => cb.addEventListener('change', () => {
+        if (isSyncing) return;
+        saveCheckboxToFirebase(cb.dataset.key, cb.checked);
+        updateOverall();
+      }));
+    }
+
+    function checkAll(flag) {
+      // Update built-in checkboxes
+      const updates = {};
+      getAllCheckboxes().forEach(cb => {
+        cb.checked = flag;
+        updates[cb.dataset.key] = flag;
+      });
+      checklistRef.update(updates);
+
+      // Update custom items
+      customRef.once('value').then(snapshot => {
+        let items = snapshot.val() || [];
+        if (!Array.isArray(items)) items = Object.values(items);
+        items.forEach(it => it.checked = flag);
+        saveCustomToFirebase(items);
+      });
+
+      updateOverall();
+    }
+
+    // ========== CONNECTION STATUS ==========
+
+    db.ref('.info/connected').on('value', (snapshot) => {
+      updateSyncStatus(snapshot.val() === true);
+    });
+
+    // ========== EVENT LISTENERS ==========
+
+    document.getElementById('editModal').addEventListener('click', (e) => {
+      if (e.target.id === 'editModal') closeEditModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeEditModal();
+      if (e.key === 'Enter') {
+        const modal = document.getElementById('editModal');
+        if (modal.classList.contains('show')) {
+          saveEdit();
+        } else {
+          const active = document.activeElement;
+          if (active && (active.id === 'add_name' || active.id === 'add_note')) {
+            addCustomItem();
+          }
+        }
+      }
+    });
+
+    // Expose functions
+    window.checkAll = checkAll;
+    window.addCustomItem = addCustomItem;
+    window.openEditModal = openEditModal;
+    window.closeEditModal = closeEditModal;
+    window.saveEdit = saveEdit;
+
+    // ========== INIT ==========
+    bindBuiltInCheckboxes();
+    listenToCheckboxes();
+    listenToCustom();
+    updateOverall();
+  </script>
+</body>
+</html>

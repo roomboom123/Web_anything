@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Travel Checklist</title>
+  <title>준비물 체크리스트</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -14,8 +14,8 @@
     <header class="topbar">
       <div class="topbar__row">
         <div class="title-block">
-          <div class="title-block__eyebrow">Shared travel board</div>
-          <h1>Travel Checklist</h1>
+          <div class="title-block__eyebrow">공유 준비물 보드</div>
+          <h1 id="pageTitle">준비물 체크리스트</h1>
         </div>
         <div class="status-cluster">
           <div class="progress-chip">
@@ -23,25 +23,25 @@
             <strong id="overallDone">0 / 0</strong>
             <span id="overallPct">0%</span>
           </div>
-          <div class="sync-badge" id="syncBadge">Loading...</div>
+          <div class="sync-badge" id="syncBadge">불러오는 중...</div>
         </div>
       </div>
 
       <div class="toolbar">
         <label class="search-field">
-          <span>Search</span>
-          <input type="search" id="searchInput" placeholder="Search items, memo, tag" autocomplete="off" />
+          <span>검색</span>
+          <input type="search" id="searchInput" placeholder="항목명, 메모, 태그 검색" autocomplete="off" />
         </label>
 
         <div class="toolbar__actions">
           <label class="toggle-pill">
             <input type="checkbox" id="hideCheckedToggle" />
-            <span>Hide checked</span>
+            <span>체크 완료 숨기기</span>
           </label>
-          <button type="button" class="btn" data-action="expand-all">Expand</button>
-          <button type="button" class="btn" data-action="collapse-all">Collapse</button>
-          <button type="button" class="btn" data-action="print">Print</button>
-          <button type="button" class="btn btn--primary" data-action="new-item">Add item</button>
+          <button type="button" class="btn" data-action="expand-all">전체 펼치기</button>
+          <button type="button" class="btn" data-action="collapse-all">전체 접기</button>
+          <button type="button" class="btn" data-action="print">인쇄</button>
+          <button type="button" class="btn btn--primary" data-action="new-item">항목 추가</button>
         </div>
       </div>
 
@@ -52,10 +52,10 @@
       <section class="list-pane">
         <div class="list-pane__meta">
           <div>
-            <strong id="visibleSummary">0 items</strong>
-            <span id="visibleHint">Ready to pack.</span>
+            <strong id="visibleSummary">보이는 항목 0개</strong>
+            <span id="visibleHint">카테고리 0개 표시 중</span>
           </div>
-          <button type="button" class="btn btn--ghost" data-action="clear-search" id="clearSearchButton" hidden>Clear filters</button>
+          <button type="button" class="btn btn--ghost" data-action="clear-search" id="clearSearchButton" hidden>필터 초기화</button>
         </div>
 
         <div class="category-list" id="categoryList"></div>
@@ -64,50 +64,50 @@
       <aside class="editor-panel" id="editorPanel" aria-hidden="true">
         <div class="editor-panel__header">
           <div>
-            <span class="editor-panel__eyebrow">Quick editor</span>
-            <h2 id="editorTitle">Add item</h2>
-            <p id="editorHint">Create or update one checklist row at a time.</p>
+            <span class="editor-panel__eyebrow">빠른 편집</span>
+            <h2 id="editorTitle">항목 추가</h2>
+            <p id="editorHint">항목을 빠르게 추가하거나 수정할 수 있어요.</p>
           </div>
-          <button type="button" class="icon-btn" data-action="close-editor" aria-label="Close editor">Close</button>
+          <button type="button" class="icon-btn" data-action="close-editor" aria-label="편집 닫기">닫기</button>
         </div>
 
         <form class="editor-form" id="itemForm">
           <label class="form-field">
-            <span>Category</span>
+            <span>카테고리</span>
             <select id="itemCategory" required></select>
           </label>
 
           <label class="form-field">
-            <span>Item name</span>
-            <input type="text" id="itemName" maxlength="120" placeholder="Passport, charger, medicine..." required />
+            <span>항목 이름</span>
+            <input type="text" id="itemName" maxlength="120" placeholder="예: 여벌 옷, 충전기, 상비약" required />
           </label>
 
           <label class="form-field">
-            <span>Memo</span>
-            <input type="text" id="itemMemo" maxlength="180" placeholder="Optional note" />
+            <span>메모</span>
+            <input type="text" id="itemMemo" maxlength="180" placeholder="추가 메모가 있으면 적어주세요" />
           </label>
 
           <div class="editor-form__grid">
             <label class="form-field">
-              <span>Qty</span>
-              <input type="text" id="itemQty" maxlength="40" placeholder="1, 2 pairs..." />
+              <span>수량</span>
+              <input type="text" id="itemQty" maxlength="40" placeholder="예: 1, 2벌" />
             </label>
 
             <label class="form-field">
-              <span>Tag</span>
-              <input type="text" id="itemTag" maxlength="40" placeholder="Carry-on" />
+              <span>태그</span>
+              <input type="text" id="itemTag" maxlength="40" placeholder="예: 기내용" />
             </label>
           </div>
 
           <label class="check-row">
             <input type="checkbox" id="itemChecked" />
-            <span>Mark as packed</span>
+            <span>이미 챙긴 항목으로 표시</span>
           </label>
 
           <div class="editor-form__actions">
-            <button type="button" class="btn btn--danger" data-action="delete-item" id="deleteItemButton" hidden>Delete</button>
-            <button type="button" class="btn" data-action="close-editor">Cancel</button>
-            <button type="submit" class="btn btn--primary">Save</button>
+            <button type="button" class="btn btn--danger" data-action="delete-item" id="deleteItemButton" hidden>삭제</button>
+            <button type="button" class="btn" data-action="close-editor">취소</button>
+            <button type="submit" class="btn btn--primary">저장</button>
           </div>
         </form>
       </aside>

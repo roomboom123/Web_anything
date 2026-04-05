@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   "use strict";
 
   var FIREBASE_CONFIG = {
@@ -11,7 +11,8 @@
     appId: "1:60644884106:web:fa2497dc1854b67ea1b773"
   };
 
-  var BOARD_PATH = "travel_checklist_compact_v1";
+  var WORKSPACE_PATH = "travel_checklist_workspace_v2";
+  var LEGACY_BOARD_PATH = "travel_checklist_compact_v1";
   var LEGACY_CHECKLIST_PATH = "checklist";
   var LEGACY_CUSTOM_PATH = "custom";
   var CACHE_KEY = "travel_checklist_compact_cache_v1";
@@ -20,26 +21,26 @@
   var DEFAULT_BOARD_TITLE = "제주 체크리스트";
 
   var CUSTOM_CATEGORY_DEFS = [
-    { id: "custom_baby", name: "아기 | 직접 추가" },
-    { id: "custom_mom", name: "엄마 | 직접 추가" },
-    { id: "custom_dad", name: "아빠 | 직접 추가" },
-    { id: "custom_shared", name: "공용 | 직접 추가" }
+    { id: "custom_baby", name: "?꾧린 | 吏곸젒 異붽?" },
+    { id: "custom_mom", name: "?꾨쭏 | 吏곸젒 異붽?" },
+    { id: "custom_dad", name: "?꾨튌 | 吏곸젒 異붽?" },
+    { id: "custom_shared", name: "怨듭슜 | 吏곸젒 異붽?" }
   ];
+  DEFAULT_BOARD_TITLE = "제주 체크리스트";
 
   var LEGACY_CATEGORY_BLUEPRINT = [];
-
   var state = {
+    workspace: null,
     board: null,
-    prefs: loadPrefs(),
+    prefs: null,
     dbReady: false,
-    boardRef: null,
-    legacyChecklistRef: null,
-    legacyCustomRef: null,
-    boardListenerAttached: false,
+    workspaceRef: null,
+    legacyBoardRef: null,
+    workspaceListenerAttached: false,
     isConnected: false,
-    isSyncing: false,
-    pendingSync: false,
     remoteLoaded: false,
+    pendingSync: false,
+    isSyncing: false,
     editor: {
       open: false,
       mode: "create",
@@ -49,15 +50,159 @@
     },
     printSnapshot: null
   };
-
   var els = {};
 
   init();
 
+  function normalizeLegacyCustomItems(raw) {
+    var items = Array.isArray(raw)
+      ? raw
+      : (raw && typeof raw === "object" ? Object.values(raw) : []);
+
+    return items.filter(function (item) {
+      return item && item.category && item.name;
+    });
+  }
+
+  function hasLegacyData(checksRaw, customRaw) {
+    var hasChecks = !!checksRaw && typeof checksRaw === "object" && Object.keys(checksRaw).length > 0;
+    var customItems = normalizeLegacyCustomItems(customRaw);
+    return hasChecks || customItems.length > 0;
+  }
+
+  function buildLegacyBoard(checksRaw, customRaw) {
+    if (!hasLegacyData(checksRaw, customRaw)) return null;
+
+    var checks = checksRaw && typeof checksRaw === "object" ? checksRaw : {};
+    var customItems = normalizeLegacyCustomItems(customRaw);
+    var categories = LEGACY_CATEGORY_BLUEPRINT.map(function (category) {
+      return {
+        id: category.id,
+        name: category.name,
+        items: category.items.map(function (item) {
+          return sanitizeItem({
+            id: item.key,
+            name: item.name,
+            memo: item.note,
+            qty: "",
+            tag: item.tag,
+            checked: !!checks[item.key]
+          });
+        }).sort(sortItems)
+      };
+    });
+
+    CUSTOM_CATEGORY_DEFS.forEach(function (def) {
+      var items = customItems
+        .filter(function (item) { return item.category === def.id; })
+        .map(function (item) {
+          return sanitizeItem({
+            id: item.id || createId("custom"),
+            name: item.name,
+            memo: item.note || "",
+            qty: "",
+            tag: "吏곸젒 異붽?",
+            checked: !!item.checked
+          });
+        })
+        .sort(sortItems);
+
+      categories.push({
+        id: def.id,
+        name: def.name,
+        items: items
+      });
+    });
+
+    return sanitizeBoard({
+      title: DEFAULT_BOARD_TITLE,
+      updatedAt: Date.now(),
+      source: "legacy-jeju",
+      schemaVersion: 1,
+      categories: categories
+    });
+  }
+
+  function shouldUseLegacyBoard(compactBoard, legacyBoard) {
+    if (!legacyBoard) return false;
+    if (!compactBoard) return true;
+    if (compactBoard.source === "legacy-jeju") return false;
+    if (compactBoard.source === "sample-travel") return true;
+    if (compactBoard.title === "Travel Checklist") return true;
+
+    return compactBoard.categories.some(function (category) {
+      return category.id === "documents" || category.name === "Documents";
+    });
+  }
+
+    function createFallbackBoard() {
+    return sanitizeBoard({
+      id: createId("board"),
+      title: "\uC5EC\uD589 \uC900\uBE44 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8",
+      updatedAt: Date.now(),
+      source: "sample-travel",
+      schemaVersion: 2,
+      categories: [
+        {
+          id: "documents",
+          name: "\uC11C\uB958/\uC608\uC57D",
+          items: makeSampleItems("\uC11C\uB958", [
+            ["\uC2E0\uBD84\uC99D", "\uCD9C\uBC1C \uC804\uC5D0 \uC720\uD6A8\uAE30\uAC04\uAE4C\uC9C0 \uD655\uC778", "1"],
+            ["\uAD50\uD1B5/\uC219\uC18C \uC608\uC57D", "\uC624\uD504\uB77C\uC778\uC5D0\uC11C\uB3C4 \uBCFC \uC218 \uC788\uAC8C \uC800\uC7A5", ""],
+            ["\uACB0\uC81C \uC218\uB2E8", "\uCE74\uB4DC\uC640 \uD604\uAE08\uC744 \uB098\uB220 \uCC59\uAE30\uAE30", ""]
+          ])
+        },
+        {
+          id: "clothes",
+          name: "\uC758\uB958",
+          items: makeSampleItems("\uC758\uB958", [
+            ["\uC0C1\uC758", "\uC77C\uC815 \uAE30\uC900\uC73C\uB85C \uC5EC\uBC8C \uD3EC\uD568", "4"],
+            ["\uD558\uC758", "\uD65C\uB3D9\uC131 \uC88B\uC740 \uC870\uD569", "2"],
+            ["\uC18D\uC637/\uC591\uB9D0", "\uC608\uC0C1\uC77C\uC218\uBCF4\uB2E4 \uC870\uAE08 \uB113\uB113\uD558\uAC8C", "4\uC138\uD2B8"]
+          ])
+        },
+        {
+          id: "care",
+          name: "\uC138\uBA74/\uC0C1\uBE44",
+          items: makeSampleItems("\uAD00\uB9AC", [
+            ["\uC138\uBA74\uB3C4\uAD6C", "\uC791\uC740 \uD30C\uC6B0\uCE58\uB85C \uBB36\uC5B4\uB450\uAE30", "1"],
+            ["\uAC1C\uC778 \uC0C1\uBE44\uC57D", "\uD3C9\uC18C \uBA39\uB294 \uC57D \uC6B0\uC120", "1"],
+            ["\uC120\uD06C\uB9BC", "\uC57C\uC678 \uC77C\uC815\uC774 \uC788\uC73C\uBA74 \uD544\uC218", "1"]
+          ])
+        },
+        {
+          id: "dayof",
+          name: "\uC774\uB3D9 \uB2F9\uC77C",
+          items: makeSampleItems("\uB2F9\uC77C", [
+            ["\uBB3C/\uAC04\uC2DD", "\uAE34 \uC774\uB3D9\uC774\uBA74 \uBBF8\uB9AC \uCC59\uAE30\uAE30", "1"],
+            ["\uCDA9\uC804\uAE30", "\uAC00\uBC29 \uC717\uCE78\uC5D0 \uBC14\uB85C \uAEBC\uB0BC \uC704\uCE58", "1"],
+            ["\uCD9C\uBC1C \uC804 \uCCB4\uD06C", "\uBB38 \uC7A0\uAE08, \uC608\uB9E4, \uC9C0\uAC11 \uD655\uC778", "1"]
+          ])
+        }
+      ]
+    });
+  }
+
+  function getSyncedLabel(updatedAt) {
+    if (!updatedAt) return "준비 완료";
+    var date = new Date(updatedAt);
+    return "업데이트 " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function resetEditorState() {
+    state.editor.open = false;
+    state.editor.mode = "create";
+    state.editor.categoryId = getDefaultCategoryId();
+    state.editor.itemId = "";
+    state.editor.draft = createEmptyDraft(state.editor.categoryId);
+  }
+
   function init() {
+    state.prefs = loadPrefs();
     cacheElements();
-    state.board = loadCachedBoard() || createFallbackBoard();
+    state.workspace = loadCachedWorkspace() || createFallbackWorkspace();
     normalizePrefs();
+    syncActiveBoardFromWorkspace();
     bindEvents();
     render();
     initFirebase();
@@ -71,6 +216,7 @@
     els.overallPct = document.getElementById("overallPct");
     els.searchInput = document.getElementById("searchInput");
     els.hideCheckedToggle = document.getElementById("hideCheckedToggle");
+    els.boardTabs = document.getElementById("boardTabs");
     els.categoryTabs = document.getElementById("categoryTabs");
     els.visibleSummary = document.getElementById("visibleSummary");
     els.visibleHint = document.getElementById("visibleHint");
@@ -100,34 +246,33 @@
 
   function initFirebase() {
     if (typeof firebase === "undefined") {
-      setSyncState("offline", "파이어베이스를 불러오지 못했어요. 이 브라우저에만 저장됩니다.");
+      setSyncState("offline", "파이어베이스를 불러오지 못했어요. 브라우저 저장만 사용합니다.");
       return;
     }
 
     try {
       if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
       var db = firebase.database();
-      state.boardRef = db.ref(BOARD_PATH);
-      state.legacyChecklistRef = db.ref(LEGACY_CHECKLIST_PATH);
-      state.legacyCustomRef = db.ref(LEGACY_CUSTOM_PATH);
+      state.workspaceRef = db.ref(WORKSPACE_PATH);
+      state.legacyBoardRef = db.ref(LEGACY_BOARD_PATH);
       state.dbReady = true;
 
       db.ref(".info/connected").on("value", function (snapshot) {
         state.isConnected = snapshot.val() === true;
         if (state.isConnected) {
           if (state.pendingSync) {
-            syncBoard("reconnect");
-          } else if (!state.remoteLoaded) {
-            setSyncState("syncing", "파이어베이스에 연결 중...");
+            syncWorkspace("reconnect");
+          } else if (state.remoteLoaded) {
+            setSyncState("synced", getSyncedLabel(state.workspace && state.workspace.updatedAt));
           } else {
-            setSyncState("synced", getSyncedLabel(state.board.updatedAt));
+            setSyncState("syncing", "연결 중...");
           }
         } else {
           setSyncState(
             state.remoteLoaded ? "offline" : "syncing",
             state.remoteLoaded
-              ? "오프라인 상태예요. 변경 내용은 이 브라우저에 임시 보관됩니다."
-              : "파이어베이스에 연결 중..."
+              ? "오프라인 상태예요. 변경 내용은 브라우저에 임시 저장됩니다."
+              : "파이어베이스 연결 중..."
           );
         }
       });
@@ -135,7 +280,7 @@
       loadRemoteData();
     } catch (error) {
       console.error(error);
-      setSyncState("offline", "파이어베이스 초기화에 실패했어요. 로컬 캐시로만 동작합니다.");
+      setSyncState("offline", "파이어베이스 초기화에 실패했어요. 로컬 캐시만 사용합니다.");
     }
   }
 
@@ -143,76 +288,76 @@
     setSyncState("syncing", "기존 기록을 확인하는 중...");
 
     Promise.all([
-      state.boardRef.once("value"),
-      state.legacyChecklistRef.once("value"),
-      state.legacyCustomRef.once("value")
+      state.workspaceRef.once("value"),
+      state.legacyBoardRef.once("value")
     ]).then(function (snapshots) {
-      var compactBoard = sanitizeBoard(snapshots[0].val());
-      var legacyBoard = buildLegacyBoard(snapshots[1].val(), snapshots[2].val());
+      var workspace = sanitizeWorkspace(snapshots[0].val());
+      var legacyBoard = sanitizeBoard(snapshots[1].val());
 
       state.pendingSync = false;
 
-      if (shouldUseLegacyBoard(compactBoard, legacyBoard)) {
-        state.board = legacyBoard;
+      if (workspace) {
+        state.workspace = workspace;
+      } else if (legacyBoard) {
+        state.workspace = createWorkspaceFromBoard(legacyBoard);
         state.pendingSync = true;
-      } else if (compactBoard) {
-        state.board = compactBoard;
       } else {
-        state.board = createFallbackBoard();
+        state.workspace = createFallbackWorkspace();
         state.pendingSync = true;
       }
 
       state.remoteLoaded = true;
-      saveCachedBoard(state.board);
       normalizePrefs();
-      attachBoardListener();
+      syncActiveBoardFromWorkspace();
+      saveCachedWorkspace(state.workspace);
+      attachWorkspaceListener();
       render();
 
       if (state.pendingSync) {
-        syncBoard("initial-load");
+        syncWorkspace("initial-load");
       } else {
-        setSyncState(state.isConnected ? "synced" : "offline", getSyncedLabel(state.board.updatedAt));
+        setSyncState(state.isConnected ? "synced" : "offline", getSyncedLabel(state.workspace.updatedAt));
       }
     }).catch(function (error) {
       console.error(error);
       state.remoteLoaded = true;
-      attachBoardListener();
+      attachWorkspaceListener();
       render();
-      setSyncState("offline", "기존 기록을 읽지 못했어요. 로컬 캐시를 보여주는 중입니다.");
+      setSyncState("offline", "원격 기록을 읽지 못했어요. 로컬 캐시를 보여주는 중입니다.");
     });
   }
 
-  function attachBoardListener() {
-    if (state.boardListenerAttached || !state.boardRef) return;
-    state.boardListenerAttached = true;
+  function attachWorkspaceListener() {
+    if (state.workspaceListenerAttached || !state.workspaceRef) return;
+    state.workspaceListenerAttached = true;
 
-    state.boardRef.on("value", function (snapshot) {
-      var remote = sanitizeBoard(snapshot.val());
+    state.workspaceRef.on("value", function (snapshot) {
+      var remote = sanitizeWorkspace(snapshot.val());
       if (!remote) {
         if (state.remoteLoaded && !state.pendingSync) {
           state.pendingSync = true;
-          syncBoard("seed");
+          syncWorkspace("seed");
         }
         return;
       }
 
-      var localUpdatedAt = Number(state.board.updatedAt || 0);
+      var localUpdatedAt = Number((state.workspace && state.workspace.updatedAt) || 0);
       var remoteUpdatedAt = Number(remote.updatedAt || 0);
-
       if (state.pendingSync && localUpdatedAt > remoteUpdatedAt) {
-        syncBoard("keep-local");
+        syncWorkspace("keep-local");
         return;
       }
 
       state.remoteLoaded = true;
-      state.board = remote;
-      saveCachedBoard(remote);
+      state.workspace = remote;
+      saveCachedWorkspace(remote);
       normalizePrefs();
+      syncActiveBoardFromWorkspace();
       render();
       setSyncState(state.isConnected ? "synced" : "offline", getSyncedLabel(remoteUpdatedAt));
     }, function (error) {
       console.error(error);
-      setSyncState("offline", "파이어베이스를 읽지 못했어요. 로컬 캐시로 계속 보여줍니다.");
+      setSyncState("offline", "파이어베이스를 읽지 못했어요. 로컬 캐시로 계속 보여드립니다.");
     });
   }
 
@@ -221,6 +366,13 @@
     if (!target) return;
 
     var action = target.getAttribute("data-action");
+    if (action === "new-board") return createBoardFromPrompt();
+    if (action === "rename-board") return renameCurrentBoard();
+    if (action === "delete-board") return deleteCurrentBoard();
+    if (action === "select-board") return selectBoard(target.getAttribute("data-board-id"));
+    if (action === "new-category") return createCategoryFromPrompt();
+    if (action === "rename-category") return renameCategoryFromPrompt(target.getAttribute("data-category-id"));
+    if (action === "delete-category") return deleteCategory(target.getAttribute("data-category-id"));
     if (action === "new-item") return openEditor({ mode: "create", categoryId: getDefaultCategoryId() });
     if (action === "close-editor") return closeEditor();
     if (action === "delete-item") return deleteCurrentItem();
@@ -321,13 +473,16 @@
   }
 
   function render() {
+    if (!state.board) return;
+
     normalizePrefs();
     els.pageTitle.textContent = state.board.title;
     document.title = state.board.title + " | 체크리스트";
     els.searchInput.value = state.prefs.search;
     els.hideCheckedToggle.checked = !!state.prefs.hideChecked;
     renderTopStats();
-    renderTabs();
+    renderBoardTabs();
+    renderCategoryTabs();
     renderCategories();
     renderEditor();
     els.appShell.classList.toggle("is-editor-open", state.editor.open);
@@ -336,7 +491,6 @@
   function renderTopStats() {
     var stats = getBoardStats(state.board);
     var visible = getVisibleSummary();
-
     els.overallDone.textContent = stats.done + " / " + stats.total;
     els.overallPct.textContent = stats.total ? stats.pct + "%" : "0%";
     els.visibleSummary.textContent = "보이는 항목 " + visible.items + "개";
@@ -344,17 +498,43 @@
     els.clearSearchButton.hidden = !(state.prefs.search.trim() || state.prefs.hideChecked);
   }
 
-  function renderTabs() {
-    var totalStats = getBoardStats(state.board);
-    var html = [];
-
-    html.push(renderCategoryPill(ALL_CATEGORY_ID, "전체", totalStats.done, totalStats.total, state.prefs.activeCategory === ALL_CATEGORY_ID));
-
-    state.board.categories.forEach(function (category) {
-      var stats = getCategoryStats(category);
-      html.push(renderCategoryPill(category.id, category.name, stats.done, stats.total, state.prefs.activeCategory === category.id));
+  function renderBoardTabs() {
+    var html = state.workspace.boards.map(function (board) {
+      var stats = getBoardStats(board);
+      return renderBoardPill(board.id, board.title, stats.done, stats.total, board.id === getActiveBoardId());
     });
 
+    html.push('<button type="button" class="btn" data-action="new-board">체크리스트 추가</button>');
+    html.push('<button type="button" class="btn" data-action="rename-board">이름 변경</button>');
+    html.push('<button type="button" class="btn btn--danger" data-action="delete-board"' + (state.workspace.boards.length < 2 ? ' disabled' : '') + '>삭제</button>');
+    els.boardTabs.innerHTML = html.join("");
+  }
+
+  function renderBoardPill(id, name, done, total, isActive) {
+    return [
+      '<button type="button" class="board-pill',
+      isActive ? " is-active" : "",
+      '" data-action="select-board" data-board-id="',
+      escapeHtml(id),
+      '"><span class="board-pill__name">',
+      escapeHtml(name),
+      '</span><span class="board-pill__meta">',
+      escapeHtml(done + " / " + total),
+      "</span></button>"
+    ].join("");
+  }
+
+  function renderCategoryTabs() {
+    var html = [];
+    var totalStats = getBoardStats(state.board);
+    var activeCategoryId = getActiveCategoryId();
+
+    html.push(renderCategoryPill(ALL_CATEGORY_ID, "전체", totalStats.done, totalStats.total, activeCategoryId === ALL_CATEGORY_ID));
+    state.board.categories.forEach(function (category) {
+      var stats = getCategoryStats(category);
+      html.push(renderCategoryPill(category.id, category.name, stats.done, stats.total, activeCategoryId === category.id));
+    });
+    html.push('<button type="button" class="btn" data-action="new-category">필터 추가</button>');
     els.categoryTabs.innerHTML = html.join("");
   }
 
@@ -374,27 +554,23 @@
 
   function renderCategories() {
     var categories = getFilteredCategories();
-
     if (!categories.length) {
       els.categoryList.innerHTML = '<section class="category-section"><div class="empty-state">현재 필터에 맞는 항목이 없어요.</div></section>';
       return;
     }
-
     els.categoryList.innerHTML = categories.map(renderCategorySection).join("");
   }
 
   function renderCategorySection(categoryEntry) {
     var category = categoryEntry.source;
     var stats = getCategoryStats(category);
-    var collapsed = !!state.prefs.collapsed[category.id];
+    var collapsed = !!getCollapsedMap()[category.id];
     var pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
     var itemsHtml = collapsed
       ? ""
       : (categoryEntry.items.length
-        ? '<ul class="category-items">' + categoryEntry.items.map(function (item) {
-            return renderItemRow(category.id, item);
-          }).join("") + "</ul>"
-        : '<div class="empty-state">이 카테고리에는 지금 보이는 항목이 없어요.</div>');
+        ? '<ul class="category-items">' + categoryEntry.items.map(function (item) { return renderItemRow(category.id, item); }).join("") + '</ul>'
+        : '<div class="empty-state">이 카테고리에는 아직 표시할 항목이 없어요.</div>');
 
     return [
       '<section class="category-section" id="category-',
@@ -413,32 +589,36 @@
       escapeHtml(categoryEntry.items.length + "개 표시"),
       '</span><button type="button" class="btn" data-action="add-item-in-category" data-category-id="',
       escapeHtml(category.id),
-      '">추가</button></div></div>',
+      '">항목 추가</button><button type="button" class="btn" data-action="rename-category" data-category-id="',
+      escapeHtml(category.id),
+      '">이름 변경</button><button type="button" class="btn btn--danger" data-action="delete-category" data-category-id="',
+      escapeHtml(category.id),
+      '">삭제</button></div></div>',
       itemsHtml,
-      "</section>"
+      '</section>'
     ].join("");
   }
 
   function renderItemRow(categoryId, item) {
-    var meta = item.memo ? '<div class="item-meta"><span>' + escapeHtml(item.memo) + "</span></div>" : "";
+    var meta = item.memo ? '<div class="item-meta"><span>' + escapeHtml(item.memo) + '</span></div>' : "";
     var badges = [];
-    if (item.qty) badges.push('<span class="badge">수량 ' + escapeHtml(item.qty) + "</span>");
-    if (item.tag) badges.push('<span class="badge">' + escapeHtml(item.tag) + "</span>");
+    if (item.qty) badges.push('<span class="badge">수량 ' + escapeHtml(item.qty) + '</span>');
+    if (item.tag) badges.push('<span class="badge">' + escapeHtml(item.tag) + '</span>');
 
     return [
       '<li class="item-row',
-      item.checked ? " is-checked" : "",
+      item.checked ? ' is-checked' : '',
       '"><input class="item-check" type="checkbox" data-role="item-check" data-category-id="',
       escapeHtml(categoryId),
       '" data-item-id="',
       escapeHtml(item.id),
       '"',
-      item.checked ? " checked" : "",
+      item.checked ? ' checked' : '',
       ' /><div class="item-main"><div class="item-main__line"><span class="item-name">',
       escapeHtml(item.name),
-      "</span>",
-      badges.length ? '<span class="badge-row">' + badges.join("") + "</span>" : "",
-      "</div>",
+      '</span>',
+      badges.length ? '<span class="badge-row">' + badges.join('') + '</span>' : '',
+      '</div>',
       meta,
       '</div><button type="button" class="icon-btn" data-action="edit-item" data-category-id="',
       escapeHtml(categoryId),
@@ -449,8 +629,8 @@
   }
 
   function renderEditor() {
+    if (!state.board) return;
     populateCategoryOptions();
-
     if (!state.editor.draft) {
       state.editor.draft = createEmptyDraft(state.editor.categoryId || getDefaultCategoryId());
     }
@@ -462,7 +642,6 @@
       ? "이름, 메모, 수량, 태그를 빠르게 수정할 수 있어요."
       : "현재 선택한 카테고리에 새 항목을 추가합니다.";
     els.deleteItemButton.hidden = state.editor.mode !== "edit";
-
     els.itemCategory.value = draft.categoryId || getDefaultCategoryId();
     els.itemName.value = draft.name;
     els.itemMemo.value = draft.memo;
@@ -473,13 +652,12 @@
 
   function populateCategoryOptions() {
     els.itemCategory.innerHTML = state.board.categories.map(function (category) {
-      return '<option value="' + escapeHtml(category.id) + '">' + escapeHtml(category.name) + "</option>";
+      return '<option value="' + escapeHtml(category.id) + '">' + escapeHtml(category.name) + '</option>';
     }).join("");
   }
 
   function openEditor(options) {
     var draft = createEmptyDraft(options.categoryId || getDefaultCategoryId());
-
     if (options.mode === "edit") {
       var category = findCategory(state.board, options.categoryId);
       var item = category ? findItem(category, options.itemId) : null;
@@ -501,7 +679,6 @@
     state.editor.itemId = options.itemId || "";
     state.editor.draft = draft;
     render();
-
     window.setTimeout(function () {
       els.itemName.focus();
       els.itemName.select();
@@ -509,11 +686,7 @@
   }
 
   function closeEditor() {
-    state.editor.open = false;
-    state.editor.mode = "create";
-    state.editor.categoryId = getDefaultCategoryId();
-    state.editor.itemId = "";
-    state.editor.draft = createEmptyDraft(state.editor.categoryId);
+    resetEditorState();
     render();
   }
 
@@ -523,7 +696,6 @@
 
     var categoryId = state.editor.categoryId;
     var itemId = state.editor.itemId;
-
     applyBoardChange(function (board) {
       var category = findCategory(board, categoryId);
       if (!category) return false;
@@ -533,7 +705,6 @@
       });
       return before !== category.items.length;
     });
-
     closeEditor();
   }
 
@@ -547,24 +718,135 @@
     });
   }
 
+  function selectBoard(boardId) {
+    if (!findBoard(state.workspace, boardId)) return;
+    state.prefs.activeBoardId = boardId;
+    normalizePrefs();
+    syncActiveBoardFromWorkspace();
+    resetEditorState();
+    render();
+  }
+
+  function createBoardFromPrompt() {
+    var name = window.prompt("새 체크리스트 이름을 입력하세요.", "새 체크리스트");
+    if (name === null) return;
+    name = name.trim();
+    if (!name) return;
+
+    var duplicateCurrent = !!state.board && window.confirm(
+      "현재 체크리스트 구성을 복사할까요?\n확인을 누르면 현재 구조를 복사하고, 취소를 누르면 기본 틀로 시작합니다."
+    );
+    var newBoard = duplicateCurrent
+      ? duplicateBoardForScenario(state.board, name)
+      : createScenarioBoard(name);
+
+    applyWorkspaceChange(function (workspace) {
+      workspace.boards.push(newBoard);
+      return true;
+    }, { activeBoardId: newBoard.id, activeCategoryId: ALL_CATEGORY_ID, resetEditor: true });
+  }
+
+  function renameCurrentBoard() {
+    if (!state.board) return;
+    var name = window.prompt("체크리스트 이름을 바꿔주세요.", state.board.title);
+    if (name === null) return;
+    name = name.trim();
+    if (!name || name === state.board.title) return;
+    applyBoardChange(function (board) {
+      board.title = name;
+      return true;
+    });
+  }
+
+  function deleteCurrentBoard() {
+    if (!state.workspace || state.workspace.boards.length < 2) {
+      window.alert("체크리스트는 최소 1개는 남아 있어야 해요.");
+      return;
+    }
+    if (!window.confirm('"' + state.board.title + '" 체크리스트를 삭제할까요?')) return;
+
+    var activeId = getActiveBoardId();
+    var remaining = state.workspace.boards.filter(function (board) {
+      return board.id !== activeId;
+    });
+    var nextBoardId = remaining[0] ? remaining[0].id : "";
+
+    applyWorkspaceChange(function (workspace) {
+      var before = workspace.boards.length;
+      workspace.boards = workspace.boards.filter(function (board) {
+        return board.id !== activeId;
+      });
+      return workspace.boards.length !== before;
+    }, { activeBoardId: nextBoardId, activeCategoryId: ALL_CATEGORY_ID, resetEditor: true });
+  }
+
+  function createCategoryFromPrompt() {
+    var name = window.prompt("새 필터 이름을 입력하세요.", "새 필터");
+    if (name === null) return;
+    name = name.trim();
+    if (!name) return;
+
+    var categoryId = createId("cat");
+    applyBoardChange(function (board) {
+      board.categories.push({ id: categoryId, name: name, items: [] });
+      return true;
+    }, { activeCategoryId: categoryId, resetEditor: true });
+  }
+
+  function renameCategoryFromPrompt(categoryId) {
+    var category = findCategory(state.board, categoryId);
+    if (!category) return;
+    var name = window.prompt("필터 이름을 바꿔주세요.", category.name);
+    if (name === null) return;
+    name = name.trim();
+    if (!name || name === category.name) return;
+    applyBoardChange(function (board) {
+      var target = findCategory(board, categoryId);
+      if (!target) return false;
+      target.name = name;
+      return true;
+    });
+  }
+
+  function deleteCategory(categoryId) {
+    var category = findCategory(state.board, categoryId);
+    if (!category) return;
+    if (state.board.categories.length < 2) {
+      window.alert("필터는 최소 1개는 남아 있어야 해요.");
+      return;
+    }
+
+    var message = '"' + category.name + '" 필터를 삭제할까요?';
+    if (category.items.length) message += "\n이 안의 항목 " + category.items.length + "개도 함께 삭제됩니다.";
+    if (!window.confirm(message)) return;
+
+    applyBoardChange(function (board) {
+      var before = board.categories.length;
+      board.categories = board.categories.filter(function (item) {
+        return item.id !== categoryId;
+      });
+      return board.categories.length !== before;
+    }, { activeCategoryId: ALL_CATEGORY_ID, resetEditor: true });
+  }
+
   function selectCategory(categoryId) {
-    state.prefs.activeCategory = categoryId || ALL_CATEGORY_ID;
+    setActiveCategoryId(categoryId || ALL_CATEGORY_ID);
     savePrefs();
     render();
-
-    var section = document.getElementById("category-" + state.prefs.activeCategory);
+    var section = document.getElementById("category-" + getActiveCategoryId());
     if (section) section.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
   function toggleCategory(categoryId) {
-    state.prefs.collapsed[categoryId] = !state.prefs.collapsed[categoryId];
+    var collapsedMap = getCollapsedMap();
+    collapsedMap[categoryId] = !collapsedMap[categoryId];
     savePrefs();
     render();
   }
 
   function setAllCollapsed(flag) {
     state.board.categories.forEach(function (category) {
-      state.prefs.collapsed[category.id] = !!flag;
+      getCollapsedMap()[category.id] = !!flag;
     });
     savePrefs();
     render();
@@ -573,7 +855,7 @@
   function clearFilters() {
     state.prefs.search = "";
     state.prefs.hideChecked = false;
-    state.prefs.activeCategory = ALL_CATEGORY_ID;
+    setActiveCategoryId(ALL_CATEGORY_ID);
     savePrefs();
     render();
   }
@@ -591,15 +873,16 @@
   }
 
   function getDefaultCategoryId() {
-    if (state.prefs.activeCategory !== ALL_CATEGORY_ID && findCategory(state.board, state.prefs.activeCategory)) {
-      return state.prefs.activeCategory;
+    var activeCategoryId = getActiveCategoryId();
+    if (activeCategoryId !== ALL_CATEGORY_ID && findCategory(state.board, activeCategoryId)) {
+      return activeCategoryId;
     }
     return state.board.categories[0] ? state.board.categories[0].id : "";
   }
 
   function getFilteredCategories() {
     var query = state.prefs.search.trim().toLowerCase();
-    var selectedId = state.prefs.activeCategory;
+    var selectedId = getActiveCategoryId();
     var hideChecked = !!state.prefs.hideChecked;
 
     return state.board.categories
@@ -633,19 +916,13 @@
   function getBoardStats(board) {
     var total = 0;
     var done = 0;
-
     board.categories.forEach(function (category) {
       category.items.forEach(function (item) {
         total += 1;
         if (item.checked) done += 1;
       });
     });
-
-    return {
-      total: total,
-      done: done,
-      pct: total ? Math.round((done / total) * 100) : 0
-    };
+    return { total: total, done: done, pct: total ? Math.round((done / total) * 100) : 0 };
   }
 
   function getCategoryStats(category) {
@@ -654,48 +931,60 @@
     return { total: total, done: done };
   }
 
-  function applyBoardChange(mutator) {
-    var nextBoard = clone(state.board);
-    var changed = mutator(nextBoard);
-    if (!changed) return;
-
-    nextBoard.updatedAt = Date.now();
-    nextBoard.categories = nextBoard.categories.map(function (category) {
-      return {
-        id: category.id,
-        name: category.name,
-        items: category.items.map(sanitizeItem).sort(sortItems)
-      };
-    });
-
-    state.board = sanitizeBoard(nextBoard);
-    saveCachedBoard(state.board);
-    state.pendingSync = true;
-    render();
-    syncBoard("local-change");
+  function applyBoardChange(mutator, options) {
+    applyWorkspaceChange(function (workspace) {
+      var board = findBoard(workspace, getActiveBoardId());
+      if (!board) return false;
+      var changed = mutator(board, workspace);
+      if (!changed) return false;
+      board.updatedAt = Date.now();
+      board.categories = board.categories.map(sanitizeCategory).filter(Boolean);
+      return true;
+    }, options);
   }
 
-  function syncBoard(reason) {
-    if (!state.dbReady || !state.boardRef || !state.isConnected || state.isSyncing) {
-      if (state.pendingSync) {
-        setSyncState("offline", "변경 내용은 이 브라우저에 저장됐어요. 연결되면 다시 동기화합니다.");
-      }
+  function applyWorkspaceChange(mutator, options) {
+    if (!state.workspace) return;
+    var nextWorkspace = clone(state.workspace);
+    var changed = mutator(nextWorkspace);
+    if (!changed) return;
+    nextWorkspace.updatedAt = Date.now();
+    state.workspace = sanitizeWorkspace(nextWorkspace);
+    if (!state.workspace) return;
+
+    if (options && options.activeBoardId) state.prefs.activeBoardId = options.activeBoardId;
+    normalizePrefs();
+    syncActiveBoardFromWorkspace();
+    if (options && Object.prototype.hasOwnProperty.call(options, "activeCategoryId")) {
+      setActiveCategoryId(options.activeCategoryId, getActiveBoardId());
+    }
+    if (options && options.resetEditor) resetEditorState();
+
+    saveCachedWorkspace(state.workspace);
+    savePrefs();
+    state.pendingSync = true;
+    render();
+    syncWorkspace("local-change");
+  }
+
+  function syncWorkspace(reason) {
+    if (!state.dbReady || !state.workspaceRef || !state.isConnected || state.isSyncing) {
+      if (state.pendingSync) setSyncState("offline", "변경 내용은 브라우저에 저장돼 있어요. 연결되면 다시 올립니다.");
       return;
     }
 
     state.isSyncing = true;
     state.pendingSync = false;
-    setSyncState("syncing", reason === "initial-load" ? "기존 기록을 새 화면에 반영하는 중..." : "파이어베이스에 저장 중...");
-
-    state.boardRef.set(clone(state.board)).then(function () {
+    setSyncState("syncing", reason === "initial-load" ? "기존 기록을 새 구조로 반영하는 중..." : "파이어베이스에 저장 중...");
+    state.workspaceRef.set(clone(state.workspace)).then(function () {
       state.isSyncing = false;
-      saveCachedBoard(state.board);
-      setSyncState("synced", getSyncedLabel(state.board.updatedAt));
+      saveCachedWorkspace(state.workspace);
+      setSyncState("synced", getSyncedLabel(state.workspace.updatedAt));
     }).catch(function (error) {
       console.error(error);
       state.isSyncing = false;
       state.pendingSync = true;
-      setSyncState("offline", "동기화에 실패했어요. 연결되면 다시 시도합니다.");
+      setSyncState("offline", "업로드에 실패했어요. 연결되면 다시 시도합니다.");
     });
   }
 
@@ -709,16 +998,17 @@
 
   function preparePrint() {
     state.printSnapshot = {
-      activeCategory: state.prefs.activeCategory,
+      activeBoardId: state.prefs.activeBoardId,
       hideChecked: state.prefs.hideChecked,
-      collapsed: clone(state.prefs.collapsed),
+      activeCategoryByBoard: clone(state.prefs.activeCategoryByBoard),
+      collapsedByBoard: clone(state.prefs.collapsedByBoard),
       editorOpen: state.editor.open
     };
 
-    state.prefs.activeCategory = ALL_CATEGORY_ID;
+    setActiveCategoryId(ALL_CATEGORY_ID);
     state.prefs.hideChecked = false;
     state.board.categories.forEach(function (category) {
-      state.prefs.collapsed[category.id] = false;
+      getCollapsedMap()[category.id] = false;
     });
     state.editor.open = false;
     render();
@@ -726,27 +1016,29 @@
 
   function restorePrintState() {
     if (!state.printSnapshot) return;
-    state.prefs.activeCategory = state.printSnapshot.activeCategory;
+    state.prefs.activeBoardId = state.printSnapshot.activeBoardId;
     state.prefs.hideChecked = state.printSnapshot.hideChecked;
-    state.prefs.collapsed = state.printSnapshot.collapsed;
+    state.prefs.activeCategoryByBoard = state.printSnapshot.activeCategoryByBoard;
+    state.prefs.collapsedByBoard = state.printSnapshot.collapsedByBoard;
     state.editor.open = state.printSnapshot.editorOpen;
     state.printSnapshot = null;
+    syncActiveBoardFromWorkspace();
     savePrefs();
     render();
   }
 
-  function loadCachedBoard() {
+  function loadCachedWorkspace() {
     try {
       var raw = localStorage.getItem(CACHE_KEY);
       if (!raw) return null;
-      return sanitizeBoard(JSON.parse(raw));
+      return sanitizeWorkspace(JSON.parse(raw));
     } catch (error) {
       return null;
     }
   }
 
-  function saveCachedBoard(board) {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(board));
+  function saveCachedWorkspace(workspace) {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(workspace));
   }
 
   function loadPrefs() {
@@ -764,18 +1056,28 @@
   }
 
   function normalizePrefs() {
-    var validIds = state.board.categories.map(function (category) {
-      return category.id;
+    var boards = state.workspace && Array.isArray(state.workspace.boards) ? state.workspace.boards : [];
+    var firstBoardId = boards[0] ? boards[0].id : "";
+    if (!state.prefs.activeBoardId || !findBoard(state.workspace, state.prefs.activeBoardId)) {
+      state.prefs.activeBoardId = firstBoardId;
+    }
+    if (!state.prefs.activeCategoryByBoard || typeof state.prefs.activeCategoryByBoard !== "object") {
+      state.prefs.activeCategoryByBoard = {};
+    }
+    if (!state.prefs.collapsedByBoard || typeof state.prefs.collapsedByBoard !== "object") {
+      state.prefs.collapsedByBoard = {};
+    }
+    boards.forEach(function (board) {
+      ensureBoardPrefs(board.id);
+      var validCategoryIds = board.categories.map(function (category) { return category.id; });
+      var activeCategoryId = state.prefs.activeCategoryByBoard[board.id];
+      if (activeCategoryId !== ALL_CATEGORY_ID && validCategoryIds.indexOf(activeCategoryId) === -1) {
+        state.prefs.activeCategoryByBoard[board.id] = ALL_CATEGORY_ID;
+      }
+      Object.keys(state.prefs.collapsedByBoard[board.id]).forEach(function (categoryId) {
+        if (validCategoryIds.indexOf(categoryId) === -1) delete state.prefs.collapsedByBoard[board.id][categoryId];
+      });
     });
-
-    if (state.prefs.activeCategory !== ALL_CATEGORY_ID && validIds.indexOf(state.prefs.activeCategory) === -1) {
-      state.prefs.activeCategory = ALL_CATEGORY_ID;
-    }
-
-    if (!state.prefs.collapsed || typeof state.prefs.collapsed !== "object") {
-      state.prefs.collapsed = {};
-    }
-
     savePrefs();
   }
 
@@ -783,29 +1085,45 @@
     return {
       search: "",
       hideChecked: false,
-      activeCategory: ALL_CATEGORY_ID,
-      collapsed: {}
+      activeBoardId: "",
+      activeCategoryByBoard: {},
+      collapsedByBoard: {}
     };
+  }
+
+  function sanitizeWorkspace(raw) {
+    if (!raw) return null;
+    if (Array.isArray(raw.boards)) {
+      var boards = raw.boards.map(sanitizeBoard).filter(Boolean);
+      if (!boards.length) return null;
+      return { schemaVersion: Number(raw.schemaVersion || 2), updatedAt: Number(raw.updatedAt || 0), boards: boards };
+    }
+    var singleBoard = sanitizeBoard(raw);
+    if (!singleBoard) return null;
+    return { schemaVersion: 2, updatedAt: Number(raw.updatedAt || singleBoard.updatedAt || 0), boards: [singleBoard] };
   }
 
   function sanitizeBoard(raw) {
     if (!raw || !Array.isArray(raw.categories)) return null;
-
+    var categories = raw.categories.map(sanitizeCategory).filter(Boolean);
+    if (!categories.length) categories = [createCategory("기본")];
     return {
+      id: typeof raw.id === "string" && raw.id ? raw.id : createId("board"),
       title: typeof raw.title === "string" && raw.title.trim() ? raw.title.trim() : DEFAULT_BOARD_TITLE,
       updatedAt: Number(raw.updatedAt || 0),
       source: typeof raw.source === "string" ? raw.source : "",
       schemaVersion: Number(raw.schemaVersion || 1),
-      categories: raw.categories.map(sanitizeCategory).filter(Boolean)
+      categories: categories
     };
   }
 
   function sanitizeCategory(raw) {
-    if (!raw || !Array.isArray(raw.items)) return null;
+    if (!raw) return null;
+    var items = Array.isArray(raw.items) ? raw.items.map(sanitizeItem).sort(sortItems) : [];
     return {
       id: typeof raw.id === "string" && raw.id ? raw.id : createId("cat"),
-      name: typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : "카테고리",
-      items: raw.items.map(sanitizeItem).sort(sortItems)
+      name: typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : "새 필터",
+      items: items
     };
   }
 
@@ -825,16 +1143,55 @@
     return a.name.localeCompare(b.name, "ko");
   }
 
+  function syncActiveBoardFromWorkspace() {
+    state.board = findBoard(state.workspace, getActiveBoardId()) || (state.workspace && state.workspace.boards[0]) || null;
+    if (state.board) {
+      state.prefs.activeBoardId = state.board.id;
+      ensureBoardPrefs(state.board.id);
+    }
+  }
+
+  function getActiveBoardId() {
+    return state.prefs.activeBoardId || "";
+  }
+
+  function ensureBoardPrefs(boardId) {
+    if (!boardId) return;
+    if (!state.prefs.activeCategoryByBoard[boardId]) state.prefs.activeCategoryByBoard[boardId] = ALL_CATEGORY_ID;
+    if (!state.prefs.collapsedByBoard[boardId] || typeof state.prefs.collapsedByBoard[boardId] !== "object") {
+      state.prefs.collapsedByBoard[boardId] = {};
+    }
+  }
+
+  function getActiveCategoryId() {
+    var boardId = getActiveBoardId();
+    ensureBoardPrefs(boardId);
+    return state.prefs.activeCategoryByBoard[boardId] || ALL_CATEGORY_ID;
+  }
+
+  function setActiveCategoryId(categoryId, boardId) {
+    var targetBoardId = boardId || getActiveBoardId();
+    ensureBoardPrefs(targetBoardId);
+    state.prefs.activeCategoryByBoard[targetBoardId] = categoryId || ALL_CATEGORY_ID;
+  }
+
+  function getCollapsedMap(boardId) {
+    var targetBoardId = boardId || getActiveBoardId();
+    ensureBoardPrefs(targetBoardId);
+    return state.prefs.collapsedByBoard[targetBoardId];
+  }
+
+  function findBoard(workspace, boardId) {
+    if (!workspace || !Array.isArray(workspace.boards)) return null;
+    return workspace.boards.find(function (board) { return board.id === boardId; }) || null;
+  }
+
   function findCategory(board, categoryId) {
-    return board.categories.find(function (category) {
-      return category.id === categoryId;
-    }) || null;
+    return board.categories.find(function (category) { return category.id === categoryId; }) || null;
   }
 
   function findItem(category, itemId) {
-    return category.items.find(function (item) {
-      return item.id === itemId;
-    }) || null;
+    return category.items.find(function (item) { return item.id === itemId; }) || null;
   }
 
   function clone(value) {
@@ -845,290 +1202,61 @@
     return prefix + "_" + Math.random().toString(36).slice(2, 10);
   }
 
+  function createCategory(name) {
+    return { id: createId("cat"), name: name || "새 필터", items: [] };
+  }
+
   function createEmptyDraft(categoryId) {
-    return {
-      categoryId: categoryId || "",
-      name: "",
-      memo: "",
-      qty: "",
-      tag: "",
-      checked: false
-    };
+    return { categoryId: categoryId || "", name: "", memo: "", qty: "", tag: "", checked: false };
   }
 
-  function getSyncedLabel(updatedAt) {
-    if (!updatedAt) return "준비 완료";
-    var date = new Date(updatedAt);
-    return "동기화 " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  function createWorkspaceFromBoard(board) {
+    return sanitizeWorkspace({ schemaVersion: 2, updatedAt: Date.now(), boards: [board] });
   }
 
-  function escapeHtml(value) {
-    return String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+  function createFallbackWorkspace() {
+    return createWorkspaceFromBoard(createFallbackBoard());
   }
 
-  function makeLegacyItems(tag, rows) {
-    return rows.map(function (row) {
-      return {
-        key: row[0],
-        name: row[1],
-        note: row[2] || "",
-        tag: tag || ""
-      };
-    });
-  }
-
-  LEGACY_CATEGORY_BLUEPRINT = [
-    { id: "carry", name: "기내 반입", items: makeLegacyItems("아기", [
-      ["carry_baby_diaper", "기저귀 (기내용 6~10개)", "지연/환승 대비"],
-      ["carry_baby_wipes", "휴대용 물티슈 2~3팩 + 휴지", "손/얼굴/기저귀"],
-      ["carry_baby_change", "여벌 옷 1세트 + 속싸개/담요 1", "토/역류/누수"],
-      ["carry_baby_pad", "기저귀 교환 패드(깔개)", "기내/공항"],
-      ["carry_baby_toys", "흡착 장난감 1 + 헝겊책 1 + 치발기", "짧고 확실한 3종"]
-    ]).concat(makeLegacyItems("부모", [
-      ["carry_id", "신분증/면허증/카드", "렌터카 인수까지"],
-      ["carry_charger", "충전기 + 보조배터리", "사진/지도/업무"],
-      ["carry_parent_change", "부모 여벌 티셔츠 1(각 1) + 지퍼백", "아기 사고 대비"],
-      ["carry_sanitizer", "손소독제/휴대용 손워시", "접촉 많을 때"]
-    ])) },
-    { id: "baby_clothes", name: "아기 | 의류 & 기저귀", items: makeLegacyItems("기저귀", [
-      ["baby_day_diaper", "낮 기저귀 새거 1팩", "부피 크면 현지 조달"],
-      ["baby_night_diaper", "밤 기저귀 8개", "흡수력 좋은 걸로"],
-      ["baby_swim_diaper", "방수/수영용 기저귀", "물놀이 일정 있을 때"]
-    ]).concat(makeLegacyItems("옷/잡화", [
-      ["baby_inner", "내복", "여벌 2~3"],
-      ["baby_pajama", "잠옷", "수면 중 땀/침 대비"],
-      ["baby_outer", "겉옷", "제주 바람 대비"],
-      ["baby_hat_socks", "모자, 양말", "체온 유지용"],
-      ["baby_swimsuit", "수영복", "온수풀/스파 일정 시"],
-      ["baby_bib_cloth", "턱받이(천)", "세탁 대비 3~5장"],
-      ["baby_cloths", "손수건", "넉넉히"],
-      ["baby_swaddle", "속싸개", "수면/안정/체온"]
-    ])).concat(makeLegacyItems("세탁", [
-      ["baby_laundry_net", "세탁망", "호텔 세탁/손빨래"],
-      ["baby_detergent", "세탁세제", "소분 추천"]
-    ])) },
-    { id: "baby_food", name: "아기 | 이유식", items: makeLegacyItems("음식", [
-      ["baby_food_packs", "실온 이유식 5팩", "여분 1~2팩 추가"],
-      ["baby_snack", "떡뻥(휴대)", "차/비행기에서 유용"]
-    ]).concat(makeLegacyItems("도구", [
-      ["baby_spoon_case", "숟가락 + 케이스", "외식/이동"],
-      ["baby_strawcup", "빨대컵", "누수 적게"],
-      ["baby_bib_silicone", "턱받이(실리콘/일회용)", "외출은 일회용 편함"],
-      ["baby_thermos", "보온병", "따뜻한 물"],
-      ["baby_pot", "전기포트", "호텔 비치 불확실 시"],
-      ["baby_dishkit", "설거지(수세미/세제/빨대솔)", "소분 추천"],
-      ["baby_food_bag", "이유식용 가방", "보냉백이면 좋음"]
-    ])) },
-    { id: "baby_play", name: "아기 | 놀기", items: makeLegacyItems("놀잇감", [
-      ["baby_cloth_book", "헝겊책(휴대)", "소리/촉감 요소"],
-      ["baby_tulip", "튤립시리즈", "최애 아이템"],
-      ["baby_dolls", "작은 인형들", "2개만 선택"],
-      ["baby_teether", "실리콘 스트랩 + 치발기", "분실 방지"],
-      ["baby_suction_toy", "비행기용 흡착장난감", "기내용"],
-      ["baby_tube", "튜브", "계획 있을 때만"]
-    ]) },
-    { id: "baby_wash", name: "아기 | 씻기 & 위생", items: makeLegacyItems("위생", [
-      ["baby_bodywash", "바디워시", "소분하면 가벼움"],
-      ["baby_tub_cleaner", "욕조클리너", "욕조 사용 시"],
-      ["baby_tooth", "칫솔/치약", "필요 시"],
-      ["baby_steril_bowl", "소독용유리그릇", "열탕 소독"],
-      ["baby_bumbo", "범보의자", "호텔방에서 잠깐"],
-      ["baby_lotion", "로션", "건조/바람"],
-      ["baby_cleanser", "엉덩이클렌저 소분", "휴대용"]
-    ]) },
-    { id: "baby_sleep", name: "아기 | 자기/외출", items: makeLegacyItems("수면", [
-      ["baby_mat", "깔것 1", "눕힘/교환용"],
-      ["baby_blanket", "담요(또는 큰 수건)", "온도차 대비"]
-    ]).concat(makeLegacyItems("이동", [
-      ["baby_stroller", "유모차(커버/케이스)", "트렁크 공간 체크"],
-      ["baby_wipes_big", "물티슈 큰거 1통", "메인 재고"],
-      ["baby_wipes_small", "물티슈 휴대용 3개", "외출 가방"],
-      ["baby_handwash", "핸드워시(휴대)", "외출 시"]
-    ])) },
-    { id: "baby_meds", name: "아기 | 상비약", items: makeLegacyItems("상비약", [
-      ["meds_physio", "피지오머 소분", "코막힘 대비"],
-      ["meds_cotton", "면봉", "위생/케어"],
-      ["meds_bepanthen", "비판텐", "발진/자극"],
-      ["meds_fever", "해열제", "비상용"]
-    ]) },
-    { id: "mom", name: "엄마 | 여행 기본", items: makeLegacyItems("속옷/양말", [
-      ["mom_underwear", "팬티 6~7장", "교체 잦음"],
-      ["mom_bra", "브라 2~3개 (수유브라)", "땀/유즙/세탁"],
-      ["mom_socks", "양말 6켤레", "실내·외출"],
-      ["mom_pads", "수유패드(일회용)", "새는 날 대비"]
-    ]).concat(makeLegacyItems("의류", [
-      ["mom_tops", "상의 4~5벌", "수유/안기 편한 옷"],
-      ["mom_bottoms", "하의 2~3벌", "운전/유모차"],
-      ["mom_sleepwear", "잠옷 2벌", "밤 수유"],
-      ["mom_outer", "가디건/바람막이 1", "제주 바람"]
-    ])).concat(makeLegacyItems("세면/화장품", [
-      ["mom_skincare", "스킨케어", "소분"],
-      ["mom_sunscreen", "선크림", "유모차 산책"],
-      ["mom_cleanser", "클렌징", "밤 체력 절약"],
-      ["mom_lipbalm", "립밤", "바람"],
-      ["mom_hairtie", "머리끈/집게핀", "필수"]
-    ])).concat(makeLegacyItems("수유/회복", [
-      ["mom_nursing_cover", "수유커버", "외부 수유"],
-      ["mom_wrist_guard", "손목 보호대", "부담 완화"],
-      ["mom_waterbottle", "텀블러/물병", "갈증 대비"]
-    ])).concat(makeLegacyItems("개인 위생/상비", [
-      ["mom_meds", "개인 상비약", "두통/소화"],
-      ["mom_sanitary", "생리대/라이너", "필요 시"],
-      ["mom_mask", "마스크", "비행기/실내"]
-    ])) },
-    { id: "dad", name: "아빠 | 여행 기본", items: makeLegacyItems("속옷/양말", [
-      ["dad_underwear", "팬티 6~7장", "여유"],
-      ["dad_socks", "양말 6켤레", "운전/외출"]
-    ]).concat(makeLegacyItems("의류", [
-      ["dad_tops", "상의 4~5벌", "미팅 있으면 셔츠"],
-      ["dad_bottoms", "하의 2~3벌", "운전 편한 바지"],
-      ["dad_sleepwear", "잠옷 1~2벌", "숙면"],
-      ["dad_outer", "바람막이/후드 1", "제주 바람"],
-      ["dad_shoes", "편한 신발 1", "이동"]
-    ])).concat(makeLegacyItems("세면/위생", [
-      ["dad_toiletries", "칫솔/치약/면도기", "기본"],
-      ["dad_lotion", "로션/립밤", "건조"],
-      ["dad_sunscreen", "선크림", "야외"]
-    ])).concat(makeLegacyItems("역할 특화", [
-      ["dad_license", "운전면허증", "렌터카"],
-      ["dad_crossbag", "크로스백/허리팩", "즉시 대응용"],
-      ["dad_sunglasses", "선글라스", "운전"],
-      ["dad_hat", "모자", "햇빛"],
-      ["dad_patches", "파스/근육통 패치", "허리/어깨"],
-      ["dad_snacks", "간단 간식", "타이밍"]
-    ])) },
-    { id: "work", name: "공용 | 출장/전자", items: makeLegacyItems("공용", [
-      ["work_laptop", "노트북/충전기", "업무"],
-      ["work_docs", "출장 서류/명함/필기구", "고정 위치"],
-      ["work_adapter", "멀티탭/어댑터", "포트 부족"]
-    ]) }
-  ];
-
-  function normalizeLegacyCustomItems(raw) {
-    var items = Array.isArray(raw)
-      ? raw
-      : (raw && typeof raw === "object" ? Object.values(raw) : []);
-
-    return items.filter(function (item) {
-      return item && item.category && item.name;
-    });
-  }
-
-  function hasLegacyData(checksRaw, customRaw) {
-    var hasChecks = !!checksRaw && typeof checksRaw === "object" && Object.keys(checksRaw).length > 0;
-    var customItems = normalizeLegacyCustomItems(customRaw);
-    return hasChecks || customItems.length > 0;
-  }
-
-  function buildLegacyBoard(checksRaw, customRaw) {
-    if (!hasLegacyData(checksRaw, customRaw)) return null;
-
-    var checks = checksRaw && typeof checksRaw === "object" ? checksRaw : {};
-    var customItems = normalizeLegacyCustomItems(customRaw);
-    var categories = LEGACY_CATEGORY_BLUEPRINT.map(function (category) {
-      return {
-        id: category.id,
-        name: category.name,
-        items: category.items.map(function (item) {
-          return sanitizeItem({
-            id: item.key,
-            name: item.name,
-            memo: item.note,
-            qty: "",
-            tag: item.tag,
-            checked: !!checks[item.key]
-          });
-        }).sort(sortItems)
-      };
-    });
-
-    CUSTOM_CATEGORY_DEFS.forEach(function (def) {
-      var items = customItems
-        .filter(function (item) { return item.category === def.id; })
-        .map(function (item) {
-          return sanitizeItem({
-            id: item.id || createId("custom"),
-            name: item.name,
-            memo: item.note || "",
-            qty: "",
-            tag: "직접 추가",
-            checked: !!item.checked
-          });
-        })
-        .sort(sortItems);
-
-      categories.push({
-        id: def.id,
-        name: def.name,
-        items: items
-      });
-    });
-
+  function createScenarioBoard(title) {
     return sanitizeBoard({
-      title: DEFAULT_BOARD_TITLE,
+      id: createId("board"),
+      title: title || "새 체크리스트",
       updatedAt: Date.now(),
-      source: "legacy-jeju",
-      schemaVersion: 1,
-      categories: categories
-    });
-  }
-
-  function shouldUseLegacyBoard(compactBoard, legacyBoard) {
-    if (!legacyBoard) return false;
-    if (!compactBoard) return true;
-    if (compactBoard.source === "legacy-jeju") return false;
-    if (compactBoard.source === "sample-travel") return true;
-    if (compactBoard.title === "Travel Checklist") return true;
-
-    return compactBoard.categories.some(function (category) {
-      return category.id === "documents" || category.name === "Documents";
-    });
-  }
-
-  function createFallbackBoard() {
-    return sanitizeBoard({
-      title: "여행 준비 체크리스트",
-      updatedAt: Date.now(),
-      source: "sample-travel",
-      schemaVersion: 1,
+      source: "scenario-template",
+      schemaVersion: 2,
       categories: [
-        { id: "documents", name: "서류 & 예약", items: makeSampleItems("서류", [
-          ["신분증", "성인 인원 전부 확인", "1"],
-          ["교통/숙소 예약 캡처", "오프라인에서도 확인 가능하게", ""],
-          ["카드/현금/결제 앱", "예비 수단까지 챙기기", ""],
-          ["숙소 주소와 비상 연락처", "택시/문자 전달용", ""]
-        ]) },
-        { id: "clothes", name: "의류", items: makeSampleItems("의류", [
-          ["상의", "일수 + 1벌 정도", "4"],
-          ["하의", "이동 편한 옷 중심", "2"],
-          ["속옷/양말", "여벌 포함", "4세트"],
-          ["겉옷", "일교차 대비", "1"],
-          ["편한 신발", "많이 걷는 일정이면 필수", "1"]
-        ]) },
-        { id: "care", name: "세면 & 상비", items: makeSampleItems("세면", [
-          ["칫솔/치약", "기본 세면도구", "1"],
-          ["스킨케어/선크림", "소분 추천", "1세트"],
-          ["개인 약/상비약", "두통, 소화, 밴드 등", "1파우치"],
-          ["휴지/물티슈", "이동 중에도 쓰기 좋게", "1세트"]
-        ]) },
-        { id: "tech", name: "전자기기", items: makeSampleItems("전자", [
-          ["휴대폰 충전기", "인원 수에 맞게", "1"],
-          ["보조배터리", "이동이 길면 체감 큼", "1"],
-          ["멀티탭/어댑터", "포트 부족 대비", "1"],
-          ["이어폰", "교통 이동 중 사용", "1"]
-        ]) },
-        { id: "dayof", name: "당일 이동", items: makeSampleItems("당일", [
-          ["물병", "보안 검색 후 채우기", "1"],
-          ["간단 간식", "긴 이동 대비", "2"],
-          ["목베개", "비행/장거리 이동 시", "1"],
-          ["집 열쇠", "나가기 전 마지막 확인", "1"]
-        ]) }
+        createCategory("준비물"),
+        createCategory("예약/서류"),
+        createCategory("현장 할 일"),
+        createCategory("직접 추가")
       ]
+    });
+  }
+
+  function duplicateBoardForScenario(board, title) {
+    return sanitizeBoard({
+      id: createId("board"),
+      title: title || board.title,
+      updatedAt: Date.now(),
+      source: "board-duplicate",
+      schemaVersion: 2,
+      categories: board.categories.map(function (category) {
+        return {
+          id: createId("cat"),
+          name: category.name,
+          items: category.items.map(function (item) {
+            return sanitizeItem({
+              id: createId("item"),
+              name: item.name,
+              memo: item.memo,
+              qty: item.qty,
+              tag: item.tag,
+              checked: false
+            });
+          }).sort(sortItems)
+        };
+      })
     });
   }
 
@@ -1144,4 +1272,23 @@
       });
     });
   }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
 })();
+
+
+
+
+
+
+
+
+
+

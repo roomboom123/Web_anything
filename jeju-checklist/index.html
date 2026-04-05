@@ -300,6 +300,20 @@
       flex:0 0 auto;
     }
 
+    .panel-tools{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap:8px;
+    }
+
+    .panel-actions{
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      gap:6px;
+    }
+
     .progress-chip strong{display:block;font-size:15px;line-height:1.2}
     .progress-chip span{display:block;margin-top:4px;font-size:12px}
 
@@ -391,6 +405,11 @@
     .item-note{margin-top:2px;font-size:12px;line-height:1.4}
     .item-actions{justify-content:flex-end;flex:0 0 auto}
 
+    .item-actions--built-in{
+      align-items:center;
+      gap:6px;
+    }
+
     .mini-btn{
       padding:6px 10px;
       font-size:11px;
@@ -399,6 +418,7 @@
 
     .mini-btn.warm{background:var(--warm-soft);border-color:#dfb48d;color:#77431c}
     .mini-btn.danger{background:var(--danger-soft);border-color:#e3a59e;color:#80352d}
+    .mini-btn.soft{background:rgba(255,255,255,.72);border-color:rgba(202,183,159,.82);color:#53605d}
 
     .section-block + .section-block{
       margin-top:10px;
@@ -489,6 +509,8 @@
       .hero,.panel{padding:16px 14px;border-radius:24px}
       .hero__metrics,.add-grid{grid-template-columns:1fr}
       .hero__actions button{flex:1 1 calc(50% - 10px)}
+      .panel-tools{width:100%;align-items:flex-start}
+      .panel-actions{justify-content:flex-start}
       .item-actions{width:100%;justify-content:flex-start;margin-top:10px}
       .list-item{flex-wrap:wrap}
     }
@@ -579,6 +601,30 @@
       <div class="modal-actions">
         <button type="button" data-action="close-item-modal">취소</button>
         <button type="button" class="accent" data-action="save-item-edit">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="builtInModal">
+    <div class="modal">
+      <h3>Built-in 항목 추가</h3>
+      <p>선택한 기본 카드 안에 항목을 추가합니다. 추가한 항목은 같은 탭에서만 보입니다.</p>
+      <div class="field">
+        <label for="built_in_section">넣을 위치</label>
+        <select id="built_in_section"></select>
+      </div>
+      <div class="field">
+        <label for="built_in_name">이름</label>
+        <input type="text" id="built_in_name" />
+      </div>
+      <div class="field">
+        <label for="built_in_note">메모</label>
+        <input type="text" id="built_in_note" />
+      </div>
+      <input type="hidden" id="built_in_card_id" />
+      <div class="modal-actions">
+        <button type="button" data-action="close-built-in-modal">취소</button>
+        <button type="button" class="accent" data-action="save-built-in-item">추가</button>
       </div>
     </div>
   </div>
@@ -851,6 +897,7 @@
     const db = firebase.database();
     const legacyChecklistRef = db.ref("checklist");
     const legacyCustomRef = db.ref("custom");
+    const legacyBuiltInRef = db.ref("built_in_overrides_v2/jeju-default");
     const tabsRef = db.ref("tabs_v2");
 
     function isLegacyTab(tabId) {
@@ -870,7 +917,7 @@
     }
 
     function ensureTabData(tabId) {
-      if (!state.tabData[tabId]) state.tabData[tabId] = { checks: {}, customItems: [] };
+      if (!state.tabData[tabId]) state.tabData[tabId] = { checks: {}, customItems: [], builtIn: { hiddenKeys: [], extraItems: [] } };
       return state.tabData[tabId];
     }
 
@@ -882,6 +929,10 @@
       return isLegacyTab(tabId) ? legacyCustomRef : db.ref("lists_v2/" + tabId + "/custom");
     }
 
+    function getBuiltInRef(tabId) {
+      return isLegacyTab(tabId) ? legacyBuiltInRef : db.ref("lists_v2/" + tabId + "/builtIn");
+    }
+
     function normalizeUserTabs(raw) {
       if (!raw || typeof raw !== "object") return [];
       return Object.entries(raw).map(([id, value]) => Object.assign({ id }, value || {})).filter(tab => tab.id && TEMPLATES[tab.templateId]).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
@@ -890,6 +941,13 @@
     function normalizeCustomItems(raw) {
       const items = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? Object.values(raw) : [];
       return items.filter(item => item && item.id && item.category && item.name);
+    }
+
+    function normalizeBuiltInMeta(raw) {
+      const hiddenKeys = Array.isArray(raw && raw.hiddenKeys) ? raw.hiddenKeys.filter(Boolean) : [];
+      const items = Array.isArray(raw && raw.extraItems) ? raw.extraItems : raw && raw.extraItems && typeof raw.extraItems === "object" ? Object.values(raw.extraItems) : [];
+      const extraItems = items.map(item => item ? Object.assign({}, item, { sectionIndex: Number(item.sectionIndex) }) : item).filter(item => item && item.id && item.key && item.cardId && !Number.isNaN(item.sectionIndex) && item.name).map(item => Object.assign({ note: "", createdAt: 0 }, item));
+      return { hiddenKeys, extraItems };
     }
 
     function escapeHtml(value) {
@@ -940,10 +998,44 @@
       return { done, total, pct: total ? Math.round(done / total * 100) : 0 };
     }
 
+    function getResolvedCards(template, data) {
+      const hiddenKeys = new Set((data.builtIn && data.builtIn.hiddenKeys) || []);
+      const extraItems = (data.builtIn && data.builtIn.extraItems) || [];
+
+      return template.cards.map(card => {
+        const sections = card.sections.map((section, sectionIndex) => {
+          const baseItems = section.items.filter(item => !hiddenKeys.has(item.key)).map(item => Object.assign({}, item, { itemType: "base" }));
+          const addedItems = extraItems
+            .filter(item => item.cardId === card.id && item.sectionIndex === sectionIndex)
+            .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+            .map(item => ({
+              key: item.key,
+              name: item.name,
+              note: item.note || "",
+              itemType: "extra",
+              extraId: item.id
+            }));
+
+          return Object.assign({}, section, {
+            sectionIndex,
+            items: baseItems.concat(addedItems)
+          });
+        });
+
+        const cardBaseKeys = card.sections.flatMap(section => section.items.map(item => item.key));
+        const hiddenCount = cardBaseKeys.filter(key => hiddenKeys.has(key)).length;
+
+        return Object.assign({}, card, {
+          sections,
+          hiddenCount
+        });
+      });
+    }
+
     function getOverallProgress(template, data) {
       let total = data.customItems.length;
       let done = data.customItems.filter(item => item.checked).length;
-      template.cards.forEach(card => {
+      getResolvedCards(template, data).forEach(card => {
         const progress = getBuiltInProgress(card, data);
         total += progress.total;
         done += progress.done;
@@ -1013,14 +1105,16 @@
 
     function renderBuiltInCard(card, data) {
       const progress = getBuiltInProgress(card, data);
-      const sections = card.sections.map(section => '<div class="section-block">' + (section.title ? '<h3 class="section-title">' + escapeHtml(section.title) + '</h3>' : "") + '<ul class="list list--checklist">' + section.items.map(item => '<li class="list-item"><input type="checkbox" data-role="built-in-checkbox" data-item-key="' + escapeHtml(item.key) + '"' + (data.checks[item.key] ? " checked" : "") + ' /><div class="item-copy"><div class="item-name">' + escapeHtml(item.name) + '</div>' + (item.note ? '<div class="item-note">' + escapeHtml(item.note) + '</div>' : "") + '</div></li>').join("") + '</ul></div>').join("");
-      return '<section class="panel' + (card.wide ? ' full-span' : '') + '"><div class="panel__header"><div><span class="panel__eyebrow">Built-in</span><h2 class="panel__title">' + escapeHtml(card.title) + '</h2>' + (card.subtitle ? '<p class="panel__subtitle">' + escapeHtml(card.subtitle) + '</p>' : "") + renderTagRow(card.tags) + '</div>' + renderProgressChip(progress) + '</div>' + sections + '</section>';
+      const sections = card.sections.map(section => '<div class="section-block">' + (section.title ? '<h3 class="section-title">' + escapeHtml(section.title) + '</h3>' : "") + '<ul class="list list--checklist">' + section.items.map(item => '<li class="list-item"><input type="checkbox" data-role="built-in-checkbox" data-item-key="' + escapeHtml(item.key) + '"' + (data.checks[item.key] ? " checked" : "") + ' /><div class="item-copy"><div class="item-name">' + escapeHtml(item.name) + '</div>' + (item.note ? '<div class="item-note">' + escapeHtml(item.note) + '</div>' : "") + '</div><div class="item-actions item-actions--built-in"><button type="button" class="mini-btn soft" data-action="remove-built-in-item" data-item-key="' + escapeHtml(item.key) + '" data-item-kind="' + escapeHtml(item.itemType || "base") + '"' + (item.extraId ? ' data-extra-id="' + escapeHtml(item.extraId) + '"' : "") + '>제거</button></div></li>').join("") + '</ul></div>').join("");
+      const controls = '<div class="panel-tools"><div class="panel-actions"><button type="button" class="mini-btn soft" data-action="open-built-in-modal" data-card-id="' + escapeHtml(card.id) + '">항목 추가</button>' + (card.hiddenCount ? '<button type="button" class="mini-btn warm" data-action="restore-built-in-card" data-card-id="' + escapeHtml(card.id) + '">숨긴 항목 ' + String(card.hiddenCount) + '개 복원</button>' : '') + '</div>' + renderProgressChip(progress) + '</div>';
+      return '<section class="panel' + (card.wide ? ' full-span' : '') + '"><div class="panel__header"><div><span class="panel__eyebrow">Built-in</span><h2 class="panel__title">' + escapeHtml(card.title) + '</h2>' + (card.subtitle ? '<p class="panel__subtitle">' + escapeHtml(card.subtitle) + '</p>' : "") + renderTagRow(card.tags) + '</div>' + controls + '</div>' + sections + '</section>';
     }
 
     function renderBoard() {
       const template = getTemplate();
       const data = ensureTabData(state.activeTabId);
-      const builtIns = template.cards.length ? template.cards.map(card => renderBuiltInCard(card, data)).join("") : '<section class="panel full-span"><div class="empty-state"><strong>이 탭은 자유형 체크리스트예요.</strong>위의 직접 추가 영역에서 필요한 준비물을 하나씩 넣어가며 나만의 목록을 만들 수 있어요.</div></section>';
+      const resolvedCards = getResolvedCards(template, data);
+      const builtIns = resolvedCards.length ? resolvedCards.map(card => renderBuiltInCard(card, data)).join("") : '<section class="panel full-span"><div class="empty-state"><strong>이 탭은 자유형 체크리스트예요.</strong>위의 직접 추가 영역에서 필요한 준비물을 하나씩 넣어가며 나만의 목록을 만들 수 있어요.</div></section>';
       document.getElementById("board").innerHTML = renderSummaryPanel(template) + renderComposerPanel(template) + template.customCategories.map(category => renderCustomCategoryPanel(category, data)).join("") + builtIns;
     }
 
@@ -1044,6 +1138,7 @@
       detachActiveListeners();
       const checksRef = getChecklistRef(tabId);
       const customRef = getCustomRef(tabId);
+      const builtInRef = getBuiltInRef(tabId);
       const onChecks = snapshot => {
         ensureTabData(tabId).checks = snapshot.val() || {};
         if (state.activeTabId === tabId) renderApp();
@@ -1052,12 +1147,18 @@
         ensureTabData(tabId).customItems = normalizeCustomItems(snapshot.val());
         if (state.activeTabId === tabId) renderApp();
       };
+      const onBuiltIn = snapshot => {
+        ensureTabData(tabId).builtIn = normalizeBuiltInMeta(snapshot.val());
+        if (state.activeTabId === tabId) renderApp();
+      };
       checksRef.on("value", onChecks);
       customRef.on("value", onCustom);
+      builtInRef.on("value", onBuiltIn);
       state.activeListenerTabId = tabId;
       state.activeListenerCleanup = () => {
         checksRef.off("value", onChecks);
         customRef.off("value", onCustom);
+        builtInRef.off("value", onBuiltIn);
       };
     }
 
@@ -1067,6 +1168,7 @@
       localStorage.setItem(STORAGE_KEY, tabId);
       resetDraft(true);
       closeItemModal();
+      closeBuiltInModal();
       closeTabModal();
       renderApp();
       listenToActiveTabData();
@@ -1151,7 +1253,7 @@
       const template = getTemplate();
       const current = ensureTabData(tabId);
       const updates = {};
-      template.cards.forEach(card => card.sections.forEach(section => section.items.forEach(item => { updates[item.key] = flag; })));
+      getResolvedCards(template, current).forEach(card => card.sections.forEach(section => section.items.forEach(item => { updates[item.key] = flag; })));
       current.checks = Object.assign({}, current.checks, updates);
       current.customItems = current.customItems.map(item => Object.assign({}, item, { checked: flag }));
       renderApp();
@@ -1215,6 +1317,123 @@
       } catch (error) {
         console.error(error);
         showToast("삭제 중 문제가 생겼어요.");
+      }
+    }
+
+    function openBuiltInModal(cardId) {
+      const template = getTemplate();
+      const card = template.cards.find(entry => entry.id === cardId);
+      if (!card) return;
+
+      const sectionOptions = card.sections.map((section, sectionIndex) => {
+        const label = section.title || (card.sections.length > 1 ? "섹션 " + String(sectionIndex + 1) : "기본 섹션");
+        return '<option value="' + String(sectionIndex) + '">' + escapeHtml(label) + '</option>';
+      }).join("");
+
+      document.getElementById("built_in_card_id").value = card.id;
+      document.getElementById("built_in_section").innerHTML = sectionOptions;
+      document.getElementById("built_in_name").value = "";
+      document.getElementById("built_in_note").value = "";
+      document.getElementById("builtInModal").classList.add("show");
+    }
+
+    function closeBuiltInModal() {
+      document.getElementById("builtInModal").classList.remove("show");
+    }
+
+    async function saveBuiltInItem() {
+      if (!guardOnline("오프라인 상태에서는 Built-in 항목을 저장할 수 없어요.")) return;
+
+      const cardId = document.getElementById("built_in_card_id").value;
+      const sectionIndex = Number(document.getElementById("built_in_section").value);
+      const name = document.getElementById("built_in_name").value.trim();
+      const note = document.getElementById("built_in_note").value.trim();
+
+      if (!cardId || Number.isNaN(sectionIndex)) return showToast("추가할 위치를 찾지 못했어요.");
+      if (!name) return showToast("항목 이름을 적어주세요.");
+
+      const current = ensureTabData(state.activeTabId);
+      const nextBuiltIn = {
+        hiddenKeys: current.builtIn.hiddenKeys.slice(),
+        extraItems: current.builtIn.extraItems.concat([{
+          id: createId("extra"),
+          key: createId("builtin"),
+          cardId,
+          sectionIndex,
+          name,
+          note,
+          createdAt: Date.now()
+        }])
+      };
+
+      current.builtIn = nextBuiltIn;
+      closeBuiltInModal();
+      renderApp();
+
+      try {
+        await getBuiltInRef(state.activeTabId).set(nextBuiltIn);
+        showToast("Built-in 카드에 항목을 추가했어요.");
+      } catch (error) {
+        console.error(error);
+        showToast("Built-in 항목 저장 중 문제가 생겼어요.");
+      }
+    }
+
+    async function removeBuiltInItem(itemKey, itemKind, extraId) {
+      if (!guardOnline("오프라인 상태에서는 Built-in 항목을 수정할 수 없어요.")) return;
+      if (!confirm(itemKind === "extra" ? "이 추가 항목을 삭제할까요?" : "이 기본 항목을 이 탭에서 숨길까요?")) return;
+
+      const current = ensureTabData(state.activeTabId);
+      const nextBuiltIn = {
+        hiddenKeys: current.builtIn.hiddenKeys.slice(),
+        extraItems: current.builtIn.extraItems.slice()
+      };
+      const checkUpdates = {};
+
+      if (itemKind === "extra" && extraId) {
+        nextBuiltIn.extraItems = nextBuiltIn.extraItems.filter(item => item.id !== extraId);
+        checkUpdates[itemKey] = null;
+      } else {
+        if (!nextBuiltIn.hiddenKeys.includes(itemKey)) nextBuiltIn.hiddenKeys.push(itemKey);
+      }
+
+      current.builtIn = nextBuiltIn;
+      if (itemKind === "extra") current.checks = Object.assign({}, current.checks, { [itemKey]: false });
+      renderApp();
+
+      try {
+        const jobs = [getBuiltInRef(state.activeTabId).set(nextBuiltIn)];
+        if (itemKind === "extra") jobs.push(getChecklistRef(state.activeTabId).update(checkUpdates));
+        await Promise.all(jobs);
+        showToast(itemKind === "extra" ? "추가한 Built-in 항목을 삭제했어요." : "기본 항목을 숨겼어요.");
+      } catch (error) {
+        console.error(error);
+        showToast("Built-in 항목 수정 중 문제가 생겼어요.");
+      }
+    }
+
+    async function restoreBuiltInCard(cardId) {
+      if (!guardOnline("오프라인 상태에서는 복원할 수 없어요.")) return;
+      const template = getTemplate();
+      const current = ensureTabData(state.activeTabId);
+      const card = template.cards.find(entry => entry.id === cardId);
+      if (!card) return;
+
+      const cardKeys = new Set(card.sections.flatMap(section => section.items.map(item => item.key)));
+      const nextBuiltIn = {
+        hiddenKeys: current.builtIn.hiddenKeys.filter(key => !cardKeys.has(key)),
+        extraItems: current.builtIn.extraItems.slice()
+      };
+
+      current.builtIn = nextBuiltIn;
+      renderApp();
+
+      try {
+        await getBuiltInRef(state.activeTabId).set(nextBuiltIn);
+        showToast("숨긴 기본 항목을 복원했어요.");
+      } catch (error) {
+        console.error(error);
+        showToast("복원 중 문제가 생겼어요.");
       }
     }
 
@@ -1304,6 +1523,11 @@
       if (action === "save-tab") saveTab();
       if (action === "delete-tab") deleteTab();
       if (action === "add-custom-item") addCustomItem();
+      if (action === "open-built-in-modal") openBuiltInModal(target.getAttribute("data-card-id"));
+      if (action === "close-built-in-modal") closeBuiltInModal();
+      if (action === "save-built-in-item") saveBuiltInItem();
+      if (action === "remove-built-in-item") removeBuiltInItem(target.getAttribute("data-item-key"), target.getAttribute("data-item-kind"), target.getAttribute("data-extra-id"));
+      if (action === "restore-built-in-card") restoreBuiltInCard(target.getAttribute("data-card-id"));
       if (action === "edit-custom-item") openItemModal(target.getAttribute("data-custom-id"));
       if (action === "delete-custom-item") deleteCustomItem(target.getAttribute("data-custom-id"));
       if (action === "close-item-modal") closeItemModal();
@@ -1328,6 +1552,10 @@
       if (event.target.id === "itemModal") closeItemModal();
     });
 
+    document.getElementById("builtInModal").addEventListener("click", event => {
+      if (event.target.id === "builtInModal") closeBuiltInModal();
+    });
+
     document.getElementById("tabModal").addEventListener("click", event => {
       if (event.target.id === "tabModal") closeTabModal();
     });
@@ -1335,11 +1563,13 @@
     document.addEventListener("keydown", event => {
       if (event.key === "Escape") {
         closeItemModal();
+        closeBuiltInModal();
         closeTabModal();
         return;
       }
       if (event.key !== "Enter") return;
       if (document.getElementById("itemModal").classList.contains("show")) return saveItemEdit();
+      if (document.getElementById("builtInModal").classList.contains("show")) return saveBuiltInItem();
       if (document.getElementById("tabModal").classList.contains("show")) return saveTab();
       const activeId = document.activeElement && document.activeElement.id;
       if (activeId === "add_name" || activeId === "add_note") addCustomItem();

@@ -249,14 +249,14 @@
     .tab-button__meta{font-size:12px}
 
     .board-shell{margin-top:20px}
-    .board{display:grid;grid-template-columns:repeat(auto-fit, minmax(285px, 1fr));gap:16px;align-items:start}
+    .board{display:grid;grid-template-columns:repeat(auto-fit, minmax(285px, 1fr));gap:14px;align-items:start}
     .full-span{grid-column:1 / -1}
 
     .panel{
       background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(254,250,244,.94));
       border:1px solid rgba(202,183,159,.84);
       border-radius:var(--radius-lg);
-      padding:22px 20px;
+      padding:18px 17px;
       box-shadow:var(--shadow);
       min-width:0;
     }
@@ -270,8 +270,8 @@
         linear-gradient(180deg, rgba(255,251,245,.98), rgba(250,244,235,.96));
     }
 
-    .panel__subtitle{margin:10px 0 0;font-size:14px}
-    .tag-row{margin-top:14px}
+    .panel__subtitle{margin:7px 0 0;font-size:13px}
+    .tag-row{margin-top:10px}
 
     .summary-grid{
       display:grid;
@@ -281,7 +281,7 @@
     }
 
     .summary-tile{
-      padding:14px;
+      padding:12px;
       border-radius:20px;
     }
 
@@ -295,8 +295,8 @@
 
     .progress-chip{
       min-width:132px;
-      padding:12px;
-      border-radius:20px;
+      padding:10px 11px;
+      border-radius:16px;
       flex:0 0 auto;
     }
 
@@ -304,8 +304,8 @@
     .progress-chip span{display:block;margin-top:4px;font-size:12px}
 
     .progress-bar{
-      margin-top:8px;
-      height:8px;
+      margin-top:6px;
+      height:7px;
       border-radius:999px;
       background:rgba(205,190,167,.36);
       overflow:hidden;
@@ -319,7 +319,7 @@
       width:0;
     }
 
-    .helper{margin:14px 0 0}
+    .helper{margin:12px 0 0}
 
     .add-grid{
       display:grid;
@@ -358,36 +358,42 @@
       padding:0;
       display:flex;
       flex-direction:column;
-      gap:10px;
+      gap:7px;
+    }
+
+    .list--checklist{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:7px;
     }
 
     .list-item{
       display:flex;
       align-items:flex-start;
-      gap:12px;
-      padding:14px 12px;
-      border-radius:20px;
+      gap:10px;
+      padding:10px 10px;
+      border-radius:15px;
       border:1px solid rgba(210,194,170,.74);
-      background:rgba(255,250,243,.88);
+      background:rgba(255,250,243,.82);
     }
 
     .list-item input[type="checkbox"]{
-      width:20px;
-      height:20px;
-      margin-top:2px;
+      width:18px;
+      height:18px;
+      margin-top:1px;
       accent-color:var(--accent);
       flex:0 0 auto;
       cursor:pointer;
     }
 
     .item-copy{flex:1 1 auto;min-width:0}
-    .item-name{line-height:1.45}
-    .item-note{margin-top:4px;line-height:1.55}
+    .item-name{font-size:14px;line-height:1.35}
+    .item-note{margin-top:2px;font-size:12px;line-height:1.4}
     .item-actions{justify-content:flex-end;flex:0 0 auto}
 
     .mini-btn{
-      padding:8px 12px;
-      font-size:12px;
+      padding:6px 10px;
+      font-size:11px;
       font-weight:700;
     }
 
@@ -395,14 +401,14 @@
     .mini-btn.danger{background:var(--danger-soft);border-color:#e3a59e;color:#80352d}
 
     .section-block + .section-block{
-      margin-top:14px;
-      padding-top:14px;
+      margin-top:10px;
+      padding-top:10px;
       border-top:1px dashed rgba(202,183,159,.92);
     }
 
     .section-title{
-      margin:0 0 10px;
-      font-size:14px;
+      margin:0 0 7px;
+      font-size:13px;
       color:#465250;
       font-weight:700;
     }
@@ -480,11 +486,17 @@
 
     @media (max-width: 760px){
       .page{padding:16px 12px 56px}
-      .hero,.panel{padding:18px 16px;border-radius:24px}
+      .hero,.panel{padding:16px 14px;border-radius:24px}
       .hero__metrics,.add-grid{grid-template-columns:1fr}
       .hero__actions button{flex:1 1 calc(50% - 10px)}
       .item-actions{width:100%;justify-content:flex-start;margin-top:10px}
       .list-item{flex-wrap:wrap}
+    }
+
+    @media (min-width: 900px){
+      .panel.full-span .list--checklist{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
     }
 
     @media (max-width: 560px){
@@ -1001,7 +1013,7 @@
 
     function renderBuiltInCard(card, data) {
       const progress = getBuiltInProgress(card, data);
-      const sections = card.sections.map(section => '<div class="section-block">' + (section.title ? '<h3 class="section-title">' + escapeHtml(section.title) + '</h3>' : "") + '<ul class="list">' + section.items.map(item => '<li class="list-item"><input type="checkbox" data-role="built-in-checkbox" data-item-key="' + escapeHtml(item.key) + '"' + (data.checks[item.key] ? " checked" : "") + ' /><div class="item-copy"><div class="item-name">' + escapeHtml(item.name) + '</div>' + (item.note ? '<div class="item-note">' + escapeHtml(item.note) + '</div>' : "") + '</div></li>').join("") + '</ul></div>').join("");
+      const sections = card.sections.map(section => '<div class="section-block">' + (section.title ? '<h3 class="section-title">' + escapeHtml(section.title) + '</h3>' : "") + '<ul class="list list--checklist">' + section.items.map(item => '<li class="list-item"><input type="checkbox" data-role="built-in-checkbox" data-item-key="' + escapeHtml(item.key) + '"' + (data.checks[item.key] ? " checked" : "") + ' /><div class="item-copy"><div class="item-name">' + escapeHtml(item.name) + '</div>' + (item.note ? '<div class="item-note">' + escapeHtml(item.note) + '</div>' : "") + '</div></li>').join("") + '</ul></div>').join("");
       return '<section class="panel' + (card.wide ? ' full-span' : '') + '"><div class="panel__header"><div><span class="panel__eyebrow">Built-in</span><h2 class="panel__title">' + escapeHtml(card.title) + '</h2>' + (card.subtitle ? '<p class="panel__subtitle">' + escapeHtml(card.subtitle) + '</p>' : "") + renderTagRow(card.tags) + '</div>' + renderProgressChip(progress) + '</div>' + sections + '</section>';
     }
 

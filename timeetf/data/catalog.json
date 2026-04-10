@@ -1,0 +1,182 @@
+[
+  {
+    "idx": 1,
+    "name": "TIME K컬처액티브",
+    "tags": [
+      "K컬처",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=1&cate="
+  },
+  {
+    "idx": 2,
+    "name": "TIME 미국나스닥100액티브",
+    "tags": [
+      "나스닥",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=2&cate="
+  },
+  {
+    "idx": 5,
+    "name": "TIME 미국S&P500액티브",
+    "tags": [
+      "미국",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=5&cate="
+  },
+  {
+    "idx": 6,
+    "name": "TIME 글로벌AI인공지능액티브",
+    "tags": [
+      "인공지능",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=6&cate="
+  },
+  {
+    "idx": 8,
+    "name": "TIME 글로벌소비트렌드액티브",
+    "tags": [
+      "소비트렌드",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=8&cate="
+  },
+  {
+    "idx": 9,
+    "name": "TIME 글로벌바이오액티브",
+    "tags": [
+      "바이오",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=9&cate="
+  },
+  {
+    "idx": 10,
+    "name": "TIME 미국나스닥100채권혼합50액티브",
+    "tags": [
+      "채권혼합",
+      "퇴직연금(100%)",
+      "개인연금(100%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=10&cate="
+  },
+  {
+    "idx": 11,
+    "name": "TIME 코스피액티브",
+    "tags": [
+      "코스피",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=11&cate="
+  },
+  {
+    "idx": 12,
+    "name": "TIME Korea플러스배당액티브",
+    "tags": [
+      "월배당",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=12&cate="
+  },
+  {
+    "idx": 13,
+    "name": "TIME K바이오액티브",
+    "tags": [
+      "바이오",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=13&cate="
+  },
+  {
+    "idx": 15,
+    "name": "TIME 코리아밸류업액티브",
+    "tags": [
+      "밸류업",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=15&cate="
+  },
+  {
+    "idx": 16,
+    "name": "TIME K신재생에너지액티브",
+    "tags": [
+      "K신재생에너지",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=16&cate="
+  },
+  {
+    "idx": 17,
+    "name": "TIME K이노베이션액티브",
+    "tags": [
+      "K이노베이션",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=17&cate="
+  },
+  {
+    "idx": 18,
+    "name": "TIME 미국배당다우존스액티브",
+    "tags": [
+      "월배당",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=18&cate="
+  },
+  {
+    "idx": 19,
+    "name": "TIME 차이나AI테크액티브",
+    "tags": [
+      "차이나AI",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=19&cate="
+  },
+  {
+    "idx": 20,
+    "name": "TIME 글로벌우주테크&방산액티브",
+    "tags": [
+      "우주방산",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=20&cate="
+  },
+  {
+    "idx": 22,
+    "name": "TIME 글로벌탑픽액티브",
+    "tags": [
+      "글로벌탑픽",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=22&cate="
+  },
+  {
+    "idx": 24,
+    "name": "TIME 코스닥액티브",
+    "tags": [
+      "코스닥",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=24&cate="
+  }
+]

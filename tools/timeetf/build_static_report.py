@@ -801,6 +801,11 @@ def build_html(payload: dict) -> str:
       });
     }
 
+    function getLatestRankedRow(code) {
+      const rows = addRanks(getRowsForCode(code));
+      return rows.length > 0 ? rows[rows.length - 1] : null;
+    }
+
     function getLatestPrice(dateText) {
       const series = (priceOverlay.series || []).slice().sort((a, b) => a.date.localeCompare(b.date));
       if (series.length === 0) return null;
@@ -987,6 +992,9 @@ def build_html(payload: dict) -> str:
       ).values()).sort((a, b) => {
         if (a.name === FOCUS_STOCK_NAME && b.name !== FOCUS_STOCK_NAME) return -1;
         if (a.name !== FOCUS_STOCK_NAME && b.name === FOCUS_STOCK_NAME) return 1;
+        const aRank = getLatestRankedRow(a.code)?.rank ?? Number.MAX_SAFE_INTEGER;
+        const bRank = getLatestRankedRow(b.code)?.rank ?? Number.MAX_SAFE_INTEGER;
+        if (aRank !== bRank) return aRank - bRank;
         return a.name.localeCompare(b.name, "ko");
       });
     }
@@ -1008,7 +1016,7 @@ def build_html(payload: dict) -> str:
             <span class="stock-name">${escapeHtml(item.name)}</span>
             <span class="stock-meta">${escapeHtml(item.code)}</span>
           </span>
-          <span class="stock-weight">${getLatestWeightText(item.code)}</span>
+          <span class="stock-weight">${getLatestRankText(item.code)}</span>
         </button>
       `).join("");
       root.querySelectorAll(".stock-button").forEach(button => {
@@ -1020,11 +1028,10 @@ def build_html(payload: dict) -> str:
       });
     }
 
-    function getLatestWeightText(code) {
-      const rows = getRowsForCode(code);
-      if (rows.length === 0) return "-";
-      const latest = rows[rows.length - 1];
-      return `${Number(latest.weight_pct).toFixed(2)}%`;
+    function getLatestRankText(code) {
+      const latest = getLatestRankedRow(code);
+      if (!latest || !latest.rank) return "-";
+      return `${latest.rank}위 · ${Number(latest.weight_pct).toFixed(2)}%`;
     }
 
     function renderFocusPanel() {
@@ -1053,8 +1060,7 @@ def build_html(payload: dict) -> str:
       renderTable("focus-table", [
         { key: "response_date", label: "날짜" },
         { key: "weight_pct", label: "비중", render: value => `${Number(value).toFixed(2)}%` },
-        { key: "rank", label: "순위", render: value => `${value}위` },
-        { key: "quantity", label: "수량", render: value => formatNumber(value) }
+        { key: "rank", label: "순위", render: value => `${value}위` }
       ], chartRows.slice().sort(sortByDateDesc).slice(0, 8));
     }
 
@@ -1103,7 +1109,6 @@ def build_html(payload: dict) -> str:
         { key: "response_date", label: "날짜" },
         { key: "weight_pct", label: "비중(%)", render: value => Number(value).toFixed(2) },
         { key: "rank", label: "순위", render: value => `${value}위` },
-        { key: "quantity", label: "수량", render: value => formatNumber(value) },
         { key: "market_value_krw", label: "평가금액", render: value => formatCurrency(value) }
       ], rankedRows.slice().sort(sortByDateDesc));
     }

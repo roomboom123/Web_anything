@@ -618,6 +618,10 @@ def build_html(payload: dict) -> str:
             <div class="value" id="focus-rank">-</div>
           </div>
           <div class="focus-metric">
+            <div class="label">최신 수량</div>
+            <div class="value" id="focus-quantity">-</div>
+          </div>
+          <div class="focus-metric">
             <div class="label">전일 대비</div>
             <div class="value" id="focus-delta">-</div>
           </div>
@@ -660,6 +664,10 @@ def build_html(payload: dict) -> str:
               <div id="stat-latest-rank" class="value">-</div>
             </div>
             <div class="mini-stat">
+              <div class="label">최신 수량</div>
+              <div id="stat-latest-quantity" class="value">-</div>
+            </div>
+            <div class="mini-stat">
               <div class="label">표시 일수</div>
               <div id="stat-span" class="value">-</div>
             </div>
@@ -679,6 +687,10 @@ def build_html(payload: dict) -> str:
             <h3>순위 추이</h3>
             <div class="chart-box" id="stock-rank-chart"></div>
           </div>
+          <div>
+            <h3>수량 추이</h3>
+            <div class="chart-box" id="stock-quantity-chart"></div>
+          </div>
         </div>
 
         <div class="table-wrap" id="stock-table"></div>
@@ -689,6 +701,8 @@ def build_html(payload: dict) -> str:
       <h2>전체 흐름</h2>
       <h3 id="count-chart-title">날짜별 구성 종목 수</h3>
       <div class="chart-box" id="count-chart"></div>
+      <h3 id="quantity-chart-title" style="margin-top: 18px;">최신 수량 상위 15개</h3>
+      <div class="chart-box" id="latest-quantity-chart"></div>
     </section>
 
     <div class="footer">
@@ -890,6 +904,38 @@ def build_html(payload: dict) -> str:
       `;
     }
 
+    function renderSvgBarChart(targetId, rows, valueKey, labelKey, color, labelFormatter) {
+      const root = document.getElementById(targetId);
+      if (!rows || rows.length === 0) {
+        root.innerHTML = '<div class="empty">표시할 데이터가 없습니다.</div>';
+        return;
+      }
+      const width = root.clientWidth || 700;
+      const height = root.clientHeight || 340;
+      const margin = { top: 20, right: 34, bottom: 22, left: 126 };
+      const innerW = width - margin.left - margin.right;
+      const rowH = Math.max(18, Math.min(28, (height - margin.top - margin.bottom) / rows.length));
+      const maxValue = Math.max(...rows.map(row => Number(row[valueKey] || 0))) || 1;
+      const bars = rows.map((row, idx) => {
+        const y = margin.top + idx * rowH;
+        const value = Number(row[valueKey] || 0);
+        const barW = Math.max(2, (value / maxValue) * innerW);
+        const label = String(row[labelKey] || "");
+        const valueText = labelFormatter ? labelFormatter(value) : formatNumber(value);
+        return `
+          <text x="${margin.left - 10}" y="${y + rowH * 0.68}" text-anchor="end" fill="#34454c" font-size="12">${escapeHtml(label)}</text>
+          <rect x="${margin.left}" y="${y + 3}" width="${barW}" height="${Math.max(10, rowH - 7)}" rx="6" fill="${color}"></rect>
+          <text x="${Math.min(margin.left + barW + 8, width - margin.right)}" y="${y + rowH * 0.68}" fill="#647076" font-size="12">${valueText}</text>
+          <title>${escapeHtml(label)} : ${valueText}</title>
+        `;
+      }).join("");
+      root.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+          ${bars}
+        </svg>
+      `;
+    }
+
     function renderWeightPriceOverlayChart(targetId, rows, priceSeries, dark=false) {
       const root = document.getElementById(targetId);
       if (!rows || rows.length === 0) {
@@ -1053,12 +1099,14 @@ def build_html(payload: dict) -> str:
       document.getElementById("focus-sub").textContent = `${latest.code} | 최신 ${latest.response_date} | ${getRangeLabel()} ${chartRows.length}일`;
       document.getElementById("focus-weight").textContent = `${Number(latest.weight_pct).toFixed(2)}%`;
       document.getElementById("focus-rank").textContent = `${latest.rank}위`;
+      document.getElementById("focus-quantity").textContent = formatNumber(latest.quantity);
       document.getElementById("focus-price").textContent = latestPrice ? formatCurrency(latestPrice.close) : "-";
       document.getElementById("focus-range-label").textContent = getRangeLabel();
       setDeltaElement("focus-delta", prev ? Number(latest.weight_pct) - Number(prev.weight_pct) : 0);
       renderWeightPriceOverlayChart("focus-chart", chartRows, priceOverlay.series || [], true);
       renderTable("focus-table", [
         { key: "response_date", label: "날짜" },
+        { key: "quantity", label: "수량", render: value => formatNumber(value) },
         { key: "weight_pct", label: "비중", render: value => `${Number(value).toFixed(2)}%` },
         { key: "rank", label: "순위", render: value => `${value}위` }
       ], chartRows.slice().sort(sortByDateDesc).slice(0, 8));
@@ -1081,6 +1129,7 @@ def build_html(payload: dict) -> str:
       document.getElementById("detail-sub").textContent = `${selected.code} | 최신 ${selected.response_date} | 표시 ${visibleStart} ~ ${visibleEnd}`;
       document.getElementById("stat-latest-weight").textContent = `${Number(selected.weight_pct).toFixed(2)}%`;
       document.getElementById("stat-latest-rank").textContent = `${selected.rank}위`;
+      document.getElementById("stat-latest-quantity").textContent = formatNumber(selected.quantity);
       document.getElementById("stat-span").textContent = `${rankedRows.length}일`;
       setDeltaElement("stat-delta", delta);
       document.getElementById("weight-chart-title").textContent =
@@ -1105,8 +1154,16 @@ def build_html(payload: dict) -> str:
         value => `${Math.round(value)}위`,
         true
       );
+      renderSvgLineChart(
+        "stock-quantity-chart",
+        rankedRows,
+        "quantity",
+        "#2563eb",
+        value => formatNumber(Math.round(value))
+      );
       renderTable("stock-table", [
         { key: "response_date", label: "날짜" },
+        { key: "quantity", label: "수량", render: value => formatNumber(value) },
         { key: "weight_pct", label: "비중(%)", render: value => Number(value).toFixed(2) },
         { key: "rank", label: "순위", render: value => `${value}위` },
         { key: "market_value_krw", label: "평가금액", render: value => formatCurrency(value) }
@@ -1142,6 +1199,25 @@ def build_html(payload: dict) -> str:
       );
     }
 
+    function renderLatestQuantityChart() {
+      const meta = reportData.meta || {};
+      const latestDate = meta.latest_response_date || (validSummary.length ? validSummary[validSummary.length - 1].response_date : "");
+      const rows = holdings
+        .filter(row => row.response_date === latestDate)
+        .sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0))
+        .slice(0, 15)
+        .map(row => ({ ...row, label: row.name }));
+      document.getElementById("quantity-chart-title").textContent = `최신 수량 상위 15개 (${latestDate || "-"})`;
+      renderSvgBarChart(
+        "latest-quantity-chart",
+        rows,
+        "quantity",
+        "label",
+        "#2563eb",
+        value => formatNumber(Math.round(value))
+      );
+    }
+
     function initRangeControl() {
       document.querySelectorAll(".range-button").forEach(button => {
         button.addEventListener("click", () => {
@@ -1155,6 +1231,7 @@ def build_html(payload: dict) -> str:
             renderStockDetail(activeStockCode);
           }
           renderCountTrend();
+          renderLatestQuantityChart();
         });
       });
     }
@@ -1183,6 +1260,7 @@ def build_html(payload: dict) -> str:
     initDefaultStock();
     renderFocusPanel();
     renderCountTrend();
+    renderLatestQuantityChart();
 
     window.addEventListener("resize", () => {
       renderFocusPanel();
@@ -1190,6 +1268,7 @@ def build_html(payload: dict) -> str:
         renderStockDetail(activeStockCode);
       }
       renderCountTrend();
+      renderLatestQuantityChart();
     });
   </script>
 </body>

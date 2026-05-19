@@ -178,5 +178,15 @@
       "퇴직연금(70%)"
     ],
     "detail_url": "https://timeetf.co.kr/m11_view.php?idx=24&cate="
+  },
+  {
+    "idx": 25,
+    "name": "TIME 글로벌휴머노이드로봇산업액티브",
+    "tags": [
+      "휴머노이드",
+      "개인연금(100%)",
+      "퇴직연금(70%)"
+    ],
+    "detail_url": "https://timeetf.co.kr/m11_view.php?idx=25&cate="
   }
 ]

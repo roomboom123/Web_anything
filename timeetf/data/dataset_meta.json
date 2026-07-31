@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-30T03:39:54",
+  "generated_at": "2026-07-31T03:58:43",
   "source": "https://timeetf.co.kr",
   "etf": {
     "idx": 24,
@@ -12,8 +12,8 @@
     "detail_url": "https://timeetf.co.kr/m11_view.php?idx=24&cate="
   },
   "start_date": "2026-03-01",
-  "end_date": "2026-07-30",
-  "requested_days": 152,
-  "valid_days": 99,
-  "latest_response_date": "2026-07-30"
+  "end_date": "2026-07-31",
+  "requested_days": 153,
+  "valid_days": 100,
+  "latest_response_date": "2026-07-31"
 }

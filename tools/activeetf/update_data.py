@@ -21,6 +21,8 @@ from active_etf_tracker import (
 logger = logging.getLogger(__name__)
 
 KST = timezone(timedelta(hours=9))
+# Stop early when WiseReport stops answering instead of waiting out every ETF's retries.
+MAX_CONSECUTIVE_CONNECTION_ERRORS = 5
 
 
 def collect_snapshots(delay_seconds: float) -> dict[str, dict[str, dict[str, Any]]]:
@@ -31,14 +33,24 @@ def collect_snapshots(delay_seconds: float) -> dict[str, dict[str, dict[str, Any
 
     by_date: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
     failures: list[str] = []
+    connection_errors = 0
     for position, etf in enumerate(etfs, start=1):
         try:
             result = fetch_cu_holdings(session, etf["code"])
+        except requests.ConnectionError as error:
+            logger.warning("%s %s: %s", etf["code"], etf["name"], error)
+            failures.append(etf["code"])
+            connection_errors += 1
+            if connection_errors >= MAX_CONSECUTIVE_CONNECTION_ERRORS:
+                logger.error("WiseReport unreachable after %d attempts in a row; stopping", connection_errors)
+                break
+            continue
         except (requests.RequestException, ValueError) as error:
             logger.warning("%s %s: %s", etf["code"], etf["name"], error)
             failures.append(etf["code"])
             continue
 
+        connection_errors = 0
         if result is None:
             logger.warning("%s %s: no CU holdings", etf["code"], etf["name"])
             failures.append(etf["code"])

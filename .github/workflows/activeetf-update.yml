@@ -1,4 +1,4 @@
-name: Update Active ETF Changes
+name: Update Active ETF Holdings
 
 on:
   workflow_dispatch:
@@ -24,6 +24,7 @@ concurrency:
 jobs:
   update-data:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -39,7 +40,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
-      - name: Collect holdings and rebuild changes
+      - name: Collect holdings
         run: python tools/activeetf/update_data.py --data-dir activeetf/data
 
       - name: Commit updated data
@@ -52,6 +53,6 @@ jobs:
             echo "No changes to commit."
             exit 0
           fi
-          git commit -m "Update active ETF changes"
+          git commit -m "Update active ETF holdings"
           git pull --rebase origin main
           git push

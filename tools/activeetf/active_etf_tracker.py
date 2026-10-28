@@ -69,7 +69,7 @@ def fetch_cu_holdings(
     etf_code: str,
 ) -> tuple[str, list[list[Any]]] | None:
     """Fetch one ETF's per-CU holdings (PDF) from WiseReport as (trade_date, rows)."""
-    response = session.get(CU_PAGE_URL, params={"cmp_cd": etf_code}, timeout=30)
+    response = session.get(CU_PAGE_URL, params={"cmp_cd": etf_code}, timeout=(10, 30))
     response.raise_for_status()
     response.encoding = "utf-8"
     page = response.text

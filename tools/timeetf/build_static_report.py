@@ -79,19 +79,29 @@ def serialize_report(dataset_dir: Path) -> dict:
 
     return {
         "meta": meta,
-        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "default_stock_code": default_stock_code,
+        "summary": summary.to_dict(orient="records"),
+        "holdings": holdings.to_dict(orient="records"),
+    }
+
+
+def serialize_bundle(dataset_dirs: list[Path]) -> dict:
+    reports = [serialize_report(dataset_dir) for dataset_dir in dataset_dirs]
+    start_date = min(report["meta"]["start_date"] for report in reports)
+    end_date = max(report["meta"]["end_date"] for report in reports)
+
+    return {
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "price_overlay": {
             "code": "491000",
             "name": "리브스메드",
             "series": fetch_naver_price_history(
                 stock_code="491000",
-                start_date=meta["start_date"],
-                end_date=meta["end_date"],
+                start_date=start_date,
+                end_date=end_date,
             ),
         },
-        "summary": summary.to_dict(orient="records"),
-        "holdings": holdings.to_dict(orient="records"),
+        "reports": reports,
     }
 
 
@@ -168,6 +178,27 @@ def build_html(payload: dict) -> str:
       white-space: nowrap;
     }
     .range-button.active {
+      background: var(--accent);
+      color: #ffffff;
+    }
+    .etf-switch {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .etf-link {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 12px;
+      text-decoration: none;
+    }
+    .etf-link.active {
+      border-color: var(--accent);
       background: var(--accent);
       color: #ffffff;
     }
@@ -556,7 +587,8 @@ def build_html(payload: dict) -> str:
   <div class="shell">
     <header class="topbar">
       <div class="title-block">
-        <h1>__ETF_NAME__</h1>
+        <nav class="etf-switch" id="etf-switch" aria-label="ETF 선택"></nav>
+        <h1 id="etf-name">__ETF_NAME__</h1>
         <p id="report-subtitle">구성종목 비중, 순위, 리브스메드 흐름</p>
       </div>
       <div class="range-control" aria-label="표시 기간">
@@ -680,11 +712,14 @@ def build_html(payload: dict) -> str:
   </div>
 
   <script>
-    const reportData = __DATA_JSON__;
+    const reportBundle = __DATA_JSON__;
+    const reports = reportBundle.reports || [];
+    const requestedEtf = new URLSearchParams(window.location.search).get("etf");
+    const reportData = reports.find(item => String(item.meta.etf.idx) === requestedEtf) || reports[0] || {};
     const summary = reportData.summary || [];
     const holdings = reportData.holdings || [];
     const validSummary = summary.filter(row => row.has_data);
-    const priceOverlay = reportData.price_overlay || { code: "", name: "", series: [] };
+    const priceOverlay = reportBundle.price_overlay || { code: "", name: "", series: [] };
     const FOCUS_STOCK_NAME = "리브스메드";
     const rowsByDate = new Map();
     holdings.forEach(row => {
@@ -1215,6 +1250,19 @@ def build_html(payload: dict) -> str:
       });
     }
 
+    function initEtfSwitch() {
+      const activeIdx = String(reportData.meta?.etf?.idx ?? "");
+      const root = document.getElementById("etf-switch");
+      root.innerHTML = reports.map(item => {
+        const idx = String(item.meta.etf.idx);
+        const activeClass = idx === activeIdx ? " active" : "";
+        return `<a class="etf-link${activeClass}" href="?etf=${idx}">${escapeHtml(item.meta.etf.name)}</a>`;
+      }).join("");
+      const etfName = reportData.meta?.etf?.name || "";
+      document.getElementById("etf-name").textContent = etfName;
+      document.title = `${etfName} 리포트`;
+    }
+
     function initSubtitle() {
       const meta = reportData.meta || {};
       const latest = meta.latest_response_date || (validSummary.length ? validSummary[validSummary.length - 1].response_date : "-");
@@ -1222,6 +1270,7 @@ def build_html(payload: dict) -> str:
         `${meta.start_date || "-"} ~ ${meta.end_date || "-"} | 최신 기준일 ${latest}`;
     }
 
+    initEtfSwitch();
     initSubtitle();
     initRangeControl();
     initFocusJump();
@@ -1243,9 +1292,10 @@ def build_html(payload: dict) -> str:
 </body>
 </html>
 """
+    default_name = payload["reports"][0]["meta"]["etf"]["name"]
     return (
-        template.replace("__TITLE__", f'{payload["meta"]["etf"]["name"]} 리포트')
-        .replace("__ETF_NAME__", payload["meta"]["etf"]["name"])
+        template.replace("__TITLE__", f'{default_name} 리포트')
+        .replace("__ETF_NAME__", default_name)
         .replace("__GENERATED_AT__", payload["generated_at"])
         .replace(
             "__DATA_JSON__",
@@ -1256,10 +1306,13 @@ def build_html(payload: dict) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build a self-contained HTML report.")
+    data_root = Path(__file__).resolve().parents[2] / "timeetf" / "data"
     parser.add_argument(
-        "--dataset-dir",
+        "--dataset-dirs",
         type=Path,
-        default=Path(__file__).resolve().parents[2] / "timeetf" / "data",
+        nargs="+",
+        default=[data_root / "24", data_root / "13"],
+        help="One dataset directory per ETF; the first one is shown by default",
     )
     parser.add_argument(
         "--output",
@@ -1268,7 +1321,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    payload = serialize_report(args.dataset_dir)
+    payload = serialize_bundle(args.dataset_dirs)
     html = build_html(payload)
     args.output.write_text(html, encoding="utf-8")
     print(f"Saved report to {args.output}")

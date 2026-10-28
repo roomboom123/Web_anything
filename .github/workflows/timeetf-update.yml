@@ -36,20 +36,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests pandas beautifulsoup4 lxml
 
-      - name: Build dataset
+      - name: Build datasets
         shell: bash
         run: |
           TODAY_KST="$(TZ=Asia/Seoul date +%F)"
-          python tools/timeetf/build_dataset.py \
-            --idx 24 \
-            --start-date 2026-03-01 \
-            --end-date "$TODAY_KST" \
-            --output-dir timeetf/data
+          # 24 = TIME 코스닥액티브, 13 = TIME K바이오액티브
+          for IDX in 24 13; do
+            python tools/timeetf/build_dataset.py \
+              --idx "$IDX" \
+              --start-date 2026-03-01 \
+              --end-date "$TODAY_KST" \
+              --output-dir "timeetf/data/$IDX"
+          done
 
       - name: Build static report
         run: |
           python tools/timeetf/build_static_report.py \
-            --dataset-dir timeetf/data \
+            --dataset-dirs timeetf/data/24 timeetf/data/13 \
             --output timeetf/index.html
 
       - name: Commit updated report
@@ -59,9 +62,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .gitignore \
             timeetf/index.html \
-            timeetf/data/catalog.json \
-            timeetf/data/dataset_meta.json \
-            timeetf/data/holdings_history.csv
+            'timeetf/data/*/catalog.json' \
+            'timeetf/data/*/dataset_meta.json' \
+            'timeetf/data/*/holdings_history.csv'
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0

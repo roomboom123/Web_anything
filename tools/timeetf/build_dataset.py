@@ -80,7 +80,7 @@ def main() -> None:
     args = parser.parse_args()
 
     output_dir = args.output_dir or (
-        Path(__file__).resolve().parents[2] / "timeetf" / "data"
+        Path(__file__).resolve().parents[2] / "timeetf" / "data" / str(args.idx)
     )
 
     build_dataset(

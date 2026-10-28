@@ -1257,7 +1257,7 @@ def build_html(payload: dict) -> str:
         const idx = String(item.meta.etf.idx);
         const activeClass = idx === activeIdx ? " active" : "";
         return `<a class="etf-link${activeClass}" href="?etf=${idx}">${escapeHtml(item.meta.etf.name)}</a>`;
-      }).join("");
+      }).join("") + `<a class="etf-link" href="../activeetf/">액티브 ETF 전체 변동 →</a>`;
       const etfName = reportData.meta?.etf?.name || "";
       document.getElementById("etf-name").textContent = etfName;
       document.title = `${etfName} 리포트`;

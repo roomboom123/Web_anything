@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>액티브 ETF 구성 변동</title>
+  <style>
+    :root {
+      --bg: #f3f5f6;
+      --panel: #ffffff;
+      --panel-soft: #f8faf9;
+      --ink: #17252b;
+      --muted: #66757c;
+      --line: #dfe6e8;
+      --accent: #087c73;
+      --accent-soft: #e7f3f1;
+      --up: #c8102e;
+      --down: #1f5fbf;
+      --shadow: 0 16px 42px rgba(23, 37, 43, 0.08);
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    .shell {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+    .kicker {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+    h1 {
+      margin: 4px 0 0 0;
+      font-size: 30px;
+      line-height: 1.18;
+    }
+    .subtitle {
+      margin: 7px 0 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    select, input[type="search"] {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+      font-size: 14px;
+      padding: 8px 10px;
+      min-width: 0;
+    }
+    .link-button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 9px 12px;
+      text-decoration: none;
+    }
+    .tabs {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      margin-bottom: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .tab, .chip {
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 12px;
+    }
+    .tab.active, .chip.active {
+      background: var(--accent);
+      color: #ffffff;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .stat {
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    .stat .label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .stat .value {
+      margin-top: 4px;
+      font-size: 22px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .filters input[type="search"] {
+      flex: 1 1 240px;
+    }
+    .chips {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .table-wrap {
+      max-height: 72vh;
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 9px 10px;
+      border-bottom: 1px solid rgba(22, 48, 56, 0.08);
+      white-space: nowrap;
+      text-align: right;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--panel-soft);
+      color: var(--muted);
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+    th.sorted {
+      color: var(--accent);
+    }
+    td.text, th.text {
+      text-align: left;
+    }
+    td {
+      font-variant-numeric: tabular-nums;
+    }
+    tbody tr:hover {
+      background: var(--accent-soft);
+    }
+    .pos {
+      color: var(--up);
+    }
+    .neg {
+      color: var(--down);
+    }
+    .badge {
+      display: inline-block;
+      min-width: 38px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      text-align: center;
+    }
+    .badge.NEW {
+      background: #fde8eb;
+      color: var(--up);
+    }
+    .badge.UP {
+      background: #fff1f2;
+      color: var(--up);
+    }
+    .badge.DOWN {
+      background: #eaf1fb;
+      color: var(--down);
+    }
+    .badge.OUT {
+      background: #dfe9f8;
+      color: var(--down);
+    }
+    .etf-button {
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
+      font: inherit;
+      padding: 0;
+      text-align: left;
+    }
+    .etf-button:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+    .message {
+      padding: 28px 16px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+    .etf-meta {
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .footer {
+      margin-top: 18px;
+      padding: 0 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    [hidden] {
+      display: none !important;
+    }
+    @media (max-width: 760px) {
+      .shell {
+        padding: 12px 16px;
+      }
+      .topbar {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+      h1 {
+        font-size: 24px;
+      }
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div>
+        <div class="kicker">국내주식형 액티브 ETF</div>
+        <h1>액티브 ETF 구성 변동</h1>
+        <p class="subtitle" id="subtitle">불러오는 중...</p>
+      </div>
+      <div class="top-actions">
+        <select id="date-select" aria-label="기준일"></select>
+        <a class="link-button" href="../timeetf/">TIME 상세 리포트</a>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="보기">
+      <button class="tab active" data-view="changes" type="button">일일 변동</button>
+      <button class="tab" data-view="holdings" type="button">ETF 구성종목</button>
+    </nav>
+
+    <section id="view-changes">
+      <div class="stats">
+        <div class="stat"><div class="label">변동 건수</div><div class="value" id="stat-count">-</div></div>
+        <div class="stat"><div class="label">신규 편입 / 전량 편출</div><div class="value" id="stat-new-out">-</div></div>
+        <div class="stat"><div class="label">추정 매수 (억)</div><div class="value pos" id="stat-buy">-</div></div>
+        <div class="stat"><div class="label">추정 매도 (억)</div><div class="value neg" id="stat-sell">-</div></div>
+      </div>
+      <div class="filters">
+        <input id="change-search" type="search" placeholder="ETF·종목 검색" aria-label="ETF·종목 검색">
+        <select id="brand-filter" aria-label="운용사"></select>
+        <div class="chips" id="type-filter">
+          <button class="chip active" data-type="" type="button">전체</button>
+          <button class="chip" data-type="NEW" type="button">신규</button>
+          <button class="chip" data-type="UP" type="button">증가</button>
+          <button class="chip" data-type="DOWN" type="button">감소</button>
+          <button class="chip" data-type="OUT" type="button">편출</button>
+        </div>
+      </div>
+      <div class="card table-wrap">
+        <table id="change-table"></table>
+        <div class="message" id="change-message" hidden></div>
+      </div>
+    </section>
+
+    <section id="view-holdings" hidden>
+      <div class="filters">
+        <select id="etf-select" aria-label="ETF"></select>
+        <input id="holding-search" type="search" placeholder="종목 검색" aria-label="종목 검색">
+      </div>
+      <div class="etf-meta" id="etf-meta"></div>
+      <div class="card table-wrap">
+        <table id="holding-table"></table>
+      </div>
+    </section>
+
+    <div class="footer">
+      출처: 네이버 금융 ETF 목록(시가총액), WiseReport ETF CU당 구성종목. 주식수는 CU(설정단위)당 수량입니다.<br>
+      추정금액(억) = 주식수 변화 × (전일 비중 ÷ 전일 주식수) × 전일 ETF 시가총액 ÷ 100, 신규 편입은 당일 비중 기준입니다.<br>
+      <span id="generated-at"></span>
+    </div>
+  </div>
+
+  <script>
+    const TYPE_LABELS = { NEW: "신규", UP: "증가", DOWN: "감소", OUT: "편출" };
+    const CHANGE_COLUMNS = [
+      { key: "etf_name", label: "ETF", kind: "etf" },
+      { key: "market_cap_100m", label: "시총(억)", digits: 0 },
+      { key: "company", label: "종목", kind: "text" },
+      { key: "type", label: "구분", kind: "type" },
+      { key: "weight_before", label: "비중 전(%)", digits: 2 },
+      { key: "weight_after", label: "비중 후(%)", digits: 2 },
+      { key: "change_weight", label: "비중 변화(%p)", digits: 2, signed: true },
+      { key: "shares_before", label: "주식수 전", digits: 0 },
+      { key: "shares_after", label: "주식수 후", digits: 0 },
+      { key: "change_shares", label: "주식수 변화", digits: 0, signed: true },
+      { key: "estimated_amount_100m", label: "추정금액(억)", digits: 2, signed: true },
+    ];
+    const HOLDING_COLUMNS = [
+      { key: "rank", label: "순위", digits: 0 },
+      { key: "company", label: "종목", kind: "text" },
+      { key: "shares", label: "주식수", digits: 0 },
+      { key: "weight", label: "비중(%)", digits: 2 },
+      { key: "change_shares", label: "전일 대비 주식수", digits: 0, signed: true },
+    ];
+
+    const state = {
+      index: null,
+      date: "",
+      view: "changes",
+      snapshot: null,
+      changes: null,
+      changeRows: [],
+      sort: { key: "estimated_amount_100m", desc: true },
+      holdingSort: { key: "rank", desc: false },
+      type: "",
+      brand: "",
+      query: "",
+      etf: "",
+      holdingQuery: "",
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function formatNumber(value, digits) {
+      if (value === null || value === undefined || value === "") return "-";
+      return Number(value).toLocaleString("ko-KR", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      });
+    }
+
+    function formatSigned(value, digits) {
+      if (value === null || value === undefined) return "-";
+      const text = formatNumber(Math.abs(value), digits);
+      if (Number(value) > 0) return `+${text}`;
+      if (Number(value) < 0) return `-${text}`;
+      return text;
+    }
+
+    function signClass(value) {
+      if (Number(value) > 0) return "pos";
+      if (Number(value) < 0) return "neg";
+      return "";
+    }
+
+    async function fetchJson(path) {
+      const response = await fetch(path, { cache: "no-store" });
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+      return response.json();
+    }
+
+    function compareValues(a, b, key, desc) {
+      const left = a[key];
+      const right = b[key];
+      let result;
+      if (typeof left === "number" && typeof right === "number") {
+        result = left - right;
+      } else {
+        result = String(left ?? "").localeCompare(String(right ?? ""), "ko");
+      }
+      return desc ? -result : result;
+    }
+
+    function renderCell(column, row) {
+      const value = row[column.key];
+      if (column.kind === "etf") {
+        return `<td class="text"><button class="etf-button" data-etf="${escapeHtml(row.etf)}" type="button">${escapeHtml(value)}</button></td>`;
+      }
+      if (column.kind === "text") {
+        return `<td class="text">${escapeHtml(value)}</td>`;
+      }
+      if (column.kind === "type") {
+        return `<td class="text"><span class="badge ${value}">${TYPE_LABELS[value] || value}</span></td>`;
+      }
+      if (column.signed) {
+        return `<td class="${signClass(value)}">${formatSigned(value, column.digits)}</td>`;
+      }
+      return `<td>${formatNumber(value, column.digits)}</td>`;
+    }
+
+    function renderTable(table, columns, rows, sort) {
+      const head = columns.map(column => {
+        const sorted = column.key === sort.key;
+        const arrow = sorted ? (sort.desc ? " ▼" : " ▲") : "";
+        const classes = [column.kind === "text" || column.kind === "etf" || column.kind === "type" ? "text" : "", sorted ? "sorted" : ""].join(" ").trim();
+        return `<th class="${classes}" data-key="${column.key}">${column.label}${arrow}</th>`;
+      }).join("");
+      const body = rows.map(row => `<tr>${columns.map(column => renderCell(column, row)).join("")}</tr>`).join("");
+      table.innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
+    }
+
+    function filteredChangeRows() {
+      const query = state.query.trim().toLowerCase();
+      return state.changeRows.filter(row => {
+        if (state.type && row.type !== state.type) return false;
+        if (state.brand && row.brand !== state.brand) return false;
+        if (query && !row.etf_name.toLowerCase().includes(query) && !row.company.toLowerCase().includes(query)) return false;
+        return true;
+      });
+    }
+
+    function renderChanges() {
+      const table = document.getElementById("change-table");
+      const message = document.getElementById("change-message");
+      if (!state.changes) {
+        table.innerHTML = "";
+        message.hidden = false;
+        const first = state.index.pdf_dates[state.index.pdf_dates.length - 1];
+        message.innerHTML = `${escapeHtml(state.date)} 기준 변동표가 없습니다.<br>변동은 전일 구성종목과 비교해 계산하므로 수집 시작일(${escapeHtml(first)}) 다음 날짜부터 표시됩니다.<br>지금은 'ETF 구성종목' 탭에서 각 ETF의 전체 구성을 볼 수 있습니다.`;
+        ["stat-count", "stat-new-out", "stat-buy", "stat-sell"].forEach(id => {
+          document.getElementById(id).textContent = "-";
+        });
+        return;
+      }
+
+      const rows = filteredChangeRows().sort((a, b) => compareValues(a, b, state.sort.key, state.sort.desc));
+      const buy = rows.filter(row => row.estimated_amount_100m > 0).reduce((sum, row) => sum + row.estimated_amount_100m, 0);
+      const sell = rows.filter(row => row.estimated_amount_100m < 0).reduce((sum, row) => sum + row.estimated_amount_100m, 0);
+      document.getElementById("stat-count").textContent = formatNumber(rows.length, 0);
+      document.getElementById("stat-new-out").textContent =
+        `${rows.filter(row => row.type === "NEW").length} / ${rows.filter(row => row.type === "OUT").length}`;
+      document.getElementById("stat-buy").textContent = formatSigned(buy, 1);
+      document.getElementById("stat-sell").textContent = formatSigned(sell, 1);
+
+      renderTable(table, CHANGE_COLUMNS, rows, state.sort);
+      message.hidden = rows.length > 0;
+      message.textContent = rows.length ? "" : "조건에 맞는 변동이 없습니다.";
+    }
+
+    function holdingRows() {
+      const etf = state.snapshot?.etfs?.[state.etf];
+      if (!etf) return [];
+      const changeByCompany = new Map(
+        state.changeRows.filter(row => row.etf === state.etf).map(row => [row.company, row.change_shares])
+      );
+      const hasBefore = Boolean(state.changes?.etfs?.[state.etf]);
+      const rows = etf.holdings
+        .map(([company, shares, weight]) => ({ company, shares, weight }))
+        .sort((a, b) => b.weight - a.weight || b.shares - a.shares)
+        .map((row, position) => ({
+          ...row,
+          rank: position + 1,
+          change_shares: hasBefore ? (changeByCompany.get(row.company) ?? 0) : null,
+        }));
+      const query = state.holdingQuery.trim().toLowerCase();
+      return query ? rows.filter(row => row.company.toLowerCase().includes(query)) : rows;
+    }
+
+    function renderHoldings() {
+      const etf = state.snapshot?.etfs?.[state.etf];
+      const meta = document.getElementById("etf-meta");
+      if (!etf) {
+        meta.textContent = "선택한 날짜에 이 ETF의 구성종목이 없습니다.";
+        document.getElementById("holding-table").innerHTML = "";
+        return;
+      }
+      const beforeDate = state.changes?.etfs?.[state.etf]?.before_date;
+      meta.textContent = `${etf.brand} · ${etf.category} · 시총 ${formatNumber(etf.market_cap_100m, 0)}억 · 구성 ${etf.holdings.length}종목 · 기준일 ${state.date}` +
+        (beforeDate ? ` (비교 ${beforeDate})` : "");
+      const rows = holdingRows().sort((a, b) => compareValues(a, b, state.holdingSort.key, state.holdingSort.desc));
+      renderTable(document.getElementById("holding-table"), HOLDING_COLUMNS, rows, state.holdingSort);
+    }
+
+    function render() {
+      document.getElementById("view-changes").hidden = state.view !== "changes";
+      document.getElementById("view-holdings").hidden = state.view !== "holdings";
+      document.querySelectorAll(".tab").forEach(tab => {
+        tab.classList.toggle("active", tab.dataset.view === state.view);
+      });
+      if (state.view === "changes") {
+        renderChanges();
+      } else {
+        renderHoldings();
+      }
+    }
+
+    function populateSelects() {
+      const etfs = Object.entries(state.snapshot?.etfs || {})
+        .map(([code, etf]) => ({ code, ...etf }))
+        .sort((a, b) => b.market_cap_100m - a.market_cap_100m);
+
+      const brands = [...new Set(etfs.map(etf => etf.brand))].sort((a, b) => a.localeCompare(b, "ko"));
+      if (state.brand && !brands.includes(state.brand)) state.brand = "";
+      document.getElementById("brand-filter").innerHTML =
+        `<option value="">전체 운용사</option>` +
+        brands.map(brand => `<option value="${escapeHtml(brand)}"${brand === state.brand ? " selected" : ""}>${escapeHtml(brand)}</option>`).join("");
+
+      if (!state.etf || !state.snapshot?.etfs?.[state.etf]) state.etf = etfs[0]?.code || "";
+      document.getElementById("etf-select").innerHTML = etfs
+        .map(etf => `<option value="${escapeHtml(etf.code)}"${etf.code === state.etf ? " selected" : ""}>${escapeHtml(etf.name)} (${formatNumber(etf.market_cap_100m, 0)}억)</option>`)
+        .join("");
+    }
+
+    async function loadDate(date) {
+      state.date = date;
+      const version = encodeURIComponent(state.index.generated_at);
+      const hasChanges = state.index.change_dates.includes(date);
+      const [snapshot, changes] = await Promise.all([
+        fetchJson(`data/pdf/${date}.json?v=${version}`),
+        hasChanges ? fetchJson(`data/changes/${date}.json?v=${version}`) : Promise.resolve(null),
+      ]);
+      state.snapshot = snapshot;
+      state.changes = changes;
+      state.changeRows = (changes?.rows || []).map(row => {
+        const etf = changes.etfs[row.etf] || {};
+        return { ...row, etf_name: etf.name || row.etf, brand: etf.brand || "", market_cap_100m: etf.market_cap_100m };
+      });
+
+      const etfCount = Object.keys(snapshot?.etfs || {}).length;
+      const beforeDates = [...new Set(Object.values(changes?.etfs || {}).map(etf => etf.before_date))].sort();
+      document.getElementById("subtitle").textContent = changes
+        ? `${beforeDates.join(", ")} → ${date} | ETF ${etfCount}개 | 변동 ${changes.rows.length}건`
+        : `${date} 구성종목 | ETF ${etfCount}개`;
+      populateSelects();
+      render();
+    }
+
+    function initEvents() {
+      document.getElementById("date-select").addEventListener("change", event => loadDate(event.target.value));
+      document.querySelectorAll(".tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+          state.view = tab.dataset.view;
+          render();
+        });
+      });
+      document.getElementById("change-search").addEventListener("input", event => {
+        state.query = event.target.value;
+        renderChanges();
+      });
+      document.getElementById("brand-filter").addEventListener("change", event => {
+        state.brand = event.target.value;
+        renderChanges();
+      });
+      document.querySelectorAll("#type-filter .chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          state.type = chip.dataset.type;
+          document.querySelectorAll("#type-filter .chip").forEach(item => item.classList.toggle("active", item === chip));
+          renderChanges();
+        });
+      });
+      document.getElementById("change-table").addEventListener("click", event => {
+        const etfButton = event.target.closest(".etf-button");
+        if (etfButton) {
+          state.etf = etfButton.dataset.etf;
+          document.getElementById("etf-select").value = state.etf;
+          state.view = "holdings";
+          render();
+          return;
+        }
+        const header = event.target.closest("th");
+        if (header) {
+          const key = header.dataset.key;
+          state.sort = { key, desc: state.sort.key === key ? !state.sort.desc : true };
+          renderChanges();
+        }
+      });
+      document.getElementById("etf-select").addEventListener("change", event => {
+        state.etf = event.target.value;
+        renderHoldings();
+      });
+      document.getElementById("holding-search").addEventListener("input", event => {
+        state.holdingQuery = event.target.value;
+        renderHoldings();
+      });
+      document.getElementById("holding-table").addEventListener("click", event => {
+        const header = event.target.closest("th");
+        if (!header) return;
+        const key = header.dataset.key;
+        state.holdingSort = { key, desc: state.holdingSort.key === key ? !state.holdingSort.desc : key !== "rank" };
+        renderHoldings();
+      });
+    }
+
+    async function init() {
+      initEvents();
+      try {
+        state.index = await fetchJson("data/index.json");
+        if (!state.index || !state.index.pdf_dates.length) throw new Error("수집된 데이터가 없습니다.");
+        document.getElementById("date-select").innerHTML = state.index.pdf_dates
+          .map(date => `<option value="${date}">${date}${state.index.change_dates.includes(date) ? "" : " (구성종목만)"}</option>`)
+          .join("");
+        document.getElementById("generated-at").textContent = `데이터 갱신: ${state.index.generated_at.replace("T", " ")}`;
+        await loadDate(state.index.pdf_dates[0]);
+      } catch (error) {
+        document.getElementById("subtitle").textContent = `데이터를 불러오지 못했습니다: ${error.message}`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

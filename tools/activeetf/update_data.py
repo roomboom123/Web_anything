@@ -4,7 +4,7 @@ import argparse
 import logging
 import time
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +19,8 @@ from active_etf_tracker import (
 )
 
 logger = logging.getLogger(__name__)
+
+KST = timezone(timedelta(hours=9))
 
 
 def collect_snapshots(delay_seconds: float) -> dict[str, dict[str, dict[str, Any]]]:
@@ -84,7 +86,7 @@ def main() -> None:
     write_json(
         args.data_dir / "index.json",
         {
-            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "generated_at": datetime.now(KST).isoformat(timespec="seconds"),
             "pdf_dates": pdf_dates[::-1],
             "change_dates": store.change_dates()[::-1],
             "latest_etf_count": len(store.load_snapshot(pdf_dates[-1])["etfs"]),

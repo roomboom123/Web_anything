@@ -639,7 +639,7 @@
         document.getElementById("date-select").innerHTML = state.index.pdf_dates
           .map(date => `<option value="${date}">${date}${state.index.change_dates.includes(date) ? "" : " (구성종목만)"}</option>`)
           .join("");
-        document.getElementById("generated-at").textContent = `데이터 갱신: ${state.index.generated_at.replace("T", " ")}`;
+        document.getElementById("generated-at").textContent = `데이터 갱신: ${state.index.generated_at.slice(0, 19).replace("T", " ")} KST`;
         await loadDate(state.index.pdf_dates[0]);
       } catch (error) {
         document.getElementById("subtitle").textContent = `데이터를 불러오지 못했습니다: ${error.message}`;

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>액티브 ETF 구성 변동</title>
+  <title>액티브 ETF 종목별 보유</title>
   <style>
     :root {
       --bg: #f3f5f6;
@@ -16,6 +16,7 @@
       --accent-soft: #e7f3f1;
       --up: #c8102e;
       --down: #1f5fbf;
+      --heat-zero: #f1f1ef;
       --shadow: 0 16px 42px rgba(23, 37, 43, 0.08);
     }
     * {
@@ -50,16 +51,14 @@
       font-size: 30px;
       line-height: 1.18;
     }
+    h2 {
+      margin: 0;
+      font-size: 17px;
+    }
     .subtitle {
       margin: 7px 0 0 0;
       color: var(--muted);
       font-size: 14px;
-    }
-    .top-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
     }
     select, input[type="search"] {
       border: 1px solid var(--line);
@@ -81,62 +80,106 @@
       padding: 9px 12px;
       text-decoration: none;
     }
-    .tabs {
-      display: inline-flex;
-      gap: 4px;
-      padding: 4px;
-      margin-bottom: 14px;
+    .card {
+      background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: var(--panel);
       box-shadow: var(--shadow);
     }
-    .tab, .chip {
+    .controls {
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin: 0;
+    }
+    .control-row input[type="search"] {
+      flex: 1 1 320px;
+    }
+    .field {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .primary-button {
       border: 0;
-      border-radius: 6px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #ffffff;
+      cursor: pointer;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 9px 16px;
+    }
+    .selected-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .selected-row .hint {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .stock-chip {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      border: 1px solid #b9dcd7;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--ink);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 5px 10px;
+    }
+    .stock-chip span {
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .text-button {
+      border: 0;
       background: transparent;
       color: var(--muted);
       cursor: pointer;
       font: inherit;
       font-size: 13px;
-      font-weight: 700;
-      padding: 8px 12px;
+      text-decoration: underline;
     }
-    .tab.active, .chip.active {
-      background: var(--accent);
-      color: #ffffff;
+    .input-message {
+      margin-top: 8px;
+      color: var(--up);
+      font-size: 13px;
     }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 12px;
+    .section {
+      margin-bottom: 14px;
+      overflow: hidden;
     }
-    .stat {
-      padding: 12px 14px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-    }
-    .stat .label {
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .stat .value {
-      margin-top: 4px;
-      font-size: 22px;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-    }
-    .filters {
+    .section-head {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 8px 12px;
       align-items: center;
-      margin-bottom: 12px;
+      padding: 14px 14px 0 14px;
     }
-    .filters input[type="search"] {
-      flex: 1 1 240px;
+    .section-head h2 {
+      margin-right: auto;
+    }
+    .note {
+      margin: 6px 14px 10px 14px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
     }
     .chips {
       display: inline-flex;
@@ -147,23 +190,48 @@
       border-radius: 8px;
       background: var(--panel);
     }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: var(--shadow);
+    .chip {
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 10px;
+    }
+    .chip.active {
+      background: var(--accent);
+      color: #ffffff;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+      align-items: center;
+    }
+    .swatch {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: 4px;
+      border-radius: 3px;
+      vertical-align: -2px;
     }
     .table-wrap {
       max-height: 72vh;
       overflow: auto;
+      border-top: 1px solid var(--line);
     }
     table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       font-size: 13px;
     }
     th, td {
-      padding: 9px 10px;
+      padding: 8px 10px;
       border-bottom: 1px solid rgba(22, 48, 56, 0.08);
       white-space: nowrap;
       text-align: right;
@@ -171,10 +239,12 @@
     th {
       position: sticky;
       top: 0;
-      z-index: 1;
+      z-index: 2;
       background: var(--panel-soft);
       color: var(--muted);
       font-weight: 600;
+    }
+    th.sortable {
       cursor: pointer;
       user-select: none;
     }
@@ -187,8 +257,26 @@
     td {
       font-variant-numeric: tabular-nums;
     }
-    tbody tr:hover {
-      background: var(--accent-soft);
+    .sticky-col {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      background: var(--panel);
+      box-shadow: 1px 0 0 var(--line);
+    }
+    th.sticky-col {
+      z-index: 3;
+      background: var(--panel-soft);
+    }
+    tbody tr:hover td {
+      background-color: var(--accent-soft);
+    }
+    tbody tr.total td {
+      background: var(--panel-soft);
+      font-weight: 700;
+    }
+    tbody tr.full td.sticky-col {
+      box-shadow: inset 3px 0 0 var(--accent), 1px 0 0 var(--line);
     }
     .pos {
       color: var(--up);
@@ -196,32 +284,41 @@
     .neg {
       color: var(--down);
     }
+    .muted {
+      color: var(--muted);
+    }
+    .sub {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    table.heat-table {
+      width: auto;
+    }
+    td.heat {
+      min-width: 72px;
+    }
+    .matrix-wrap {
+      max-height: 58vh;
+    }
     .badge {
       display: inline-block;
-      min-width: 38px;
+      margin-right: 4px;
       border-radius: 999px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      padding: 2px 8px;
-      text-align: center;
+      padding: 1px 6px;
     }
     .badge.NEW {
       background: #fde8eb;
       color: var(--up);
     }
-    .badge.UP {
-      background: #fff1f2;
-      color: var(--up);
-    }
-    .badge.DOWN {
-      background: #eaf1fb;
-      color: var(--down);
-    }
     .badge.OUT {
       background: #dfe9f8;
       color: var(--down);
     }
-    .etf-button {
+    .name-button {
       border: 0;
       background: transparent;
       color: var(--ink);
@@ -230,20 +327,36 @@
       padding: 0;
       text-align: left;
     }
-    .etf-button:hover {
+    .name-button:hover, .etf-link:hover {
       color: var(--accent);
       text-decoration: underline;
     }
+    .etf-link {
+      color: var(--ink);
+      text-decoration: none;
+    }
+    td.pick, th.pick {
+      width: 34px;
+      text-align: center;
+    }
     .message {
-      padding: 28px 16px;
+      padding: 24px 16px;
       color: var(--muted);
       text-align: center;
       line-height: 1.6;
     }
-    .etf-meta {
-      margin-bottom: 12px;
-      color: var(--muted);
+    .more-button {
+      display: block;
+      width: 100%;
+      border: 0;
+      border-top: 1px solid var(--line);
+      background: var(--panel-soft);
+      color: var(--accent);
+      cursor: pointer;
+      font: inherit;
       font-size: 13px;
+      font-weight: 700;
+      padding: 10px;
     }
     .footer {
       margin-top: 18px;
@@ -266,8 +379,8 @@
       h1 {
         font-size: 24px;
       }
-      .stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+      .control-row input[type="search"] {
+        flex-basis: 100%;
       }
     }
   </style>
@@ -277,99 +390,115 @@
     <header class="topbar">
       <div>
         <div class="kicker">국내주식형 액티브 ETF</div>
-        <h1>액티브 ETF 구성 변동</h1>
+        <h1>액티브 ETF 종목별 보유</h1>
         <p class="subtitle" id="subtitle">불러오는 중...</p>
       </div>
-      <div class="top-actions">
-        <select id="date-select" aria-label="기준일"></select>
-        <a class="link-button" href="../timeetf/">TIME 상세 리포트</a>
-      </div>
+      <a class="link-button" href="../timeetf/">TIME 상세 리포트</a>
     </header>
 
-    <nav class="tabs" aria-label="보기">
-      <button class="tab active" data-view="changes" type="button">일일 변동</button>
-      <button class="tab" data-view="holdings" type="button">ETF 구성종목</button>
-    </nav>
-
-    <section id="view-changes">
-      <div class="stats">
-        <div class="stat"><div class="label">변동 건수</div><div class="value" id="stat-count">-</div></div>
-        <div class="stat"><div class="label">신규 편입 / 전량 편출</div><div class="value" id="stat-new-out">-</div></div>
-        <div class="stat"><div class="label">추정 매수 (억)</div><div class="value pos" id="stat-buy">-</div></div>
-        <div class="stat"><div class="label">추정 매도 (억)</div><div class="value neg" id="stat-sell">-</div></div>
-      </div>
-      <div class="filters">
-        <input id="change-search" type="search" placeholder="ETF·종목 검색" aria-label="ETF·종목 검색">
-        <select id="brand-filter" aria-label="운용사"></select>
-        <div class="chips" id="type-filter">
-          <button class="chip active" data-type="" type="button">전체</button>
-          <button class="chip" data-type="NEW" type="button">신규</button>
-          <button class="chip" data-type="UP" type="button">증가</button>
-          <button class="chip" data-type="DOWN" type="button">감소</button>
-          <button class="chip" data-type="OUT" type="button">편출</button>
-        </div>
-      </div>
-      <div class="card table-wrap">
-        <table id="change-table"></table>
-        <div class="message" id="change-message" hidden></div>
-      </div>
+    <section class="card controls">
+      <form class="control-row" id="stock-form">
+        <input id="stock-input" type="search" list="stock-list" autocomplete="off"
+          placeholder="종목명 입력 후 Enter · 여러 개는 쉼표로 (예: 삼성전자, SK하이닉스)" aria-label="종목 추가">
+        <datalist id="stock-list"></datalist>
+        <button class="primary-button" type="submit">추가</button>
+        <label class="field">기간 <select id="range-select"></select></label>
+        <label class="field">운용사 <select id="brand-select"></select></label>
+      </form>
+      <div class="selected-row" id="selected-row"></div>
+      <div class="input-message" id="input-message" hidden></div>
     </section>
 
-    <section id="view-holdings" hidden>
-      <div class="filters">
-        <select id="etf-select" aria-label="ETF"></select>
-        <input id="holding-search" type="search" placeholder="종목 검색" aria-label="종목 검색">
+    <div id="selected-view" hidden>
+      <section class="card section">
+        <div class="section-head">
+          <h2>누가 들고 있나</h2>
+        </div>
+        <p class="note">셀 = 비중(%) · 추정 보유액(억) · 기간 순매수(억). 왼쪽 줄이 표시된 ETF는 선택한 종목을 모두 보유합니다. 열 제목을 누르면 정렬됩니다.</p>
+        <div class="table-wrap matrix-wrap"><table id="matrix-table"></table></div>
+        <div class="message" id="matrix-message" hidden></div>
+      </section>
+
+      <section class="card section">
+        <div class="section-head">
+          <h2>날짜별 변동</h2>
+          <div class="chips" id="date-metric"></div>
+        </div>
+        <p class="note legend" id="date-legend"></p>
+        <div class="table-wrap"><table class="heat-table" id="date-table"></table></div>
+        <div class="message" id="date-message" hidden></div>
+      </section>
+
+      <section class="card section">
+        <div class="section-head">
+          <h2>ETF별 날짜 변동</h2>
+          <div class="chips" id="drill-stock"></div>
+          <div class="chips" id="drill-metric"></div>
+        </div>
+        <p class="note legend" id="drill-legend"></p>
+        <div class="table-wrap"><table class="heat-table" id="drill-table"></table></div>
+        <div class="message" id="drill-message" hidden></div>
+      </section>
+    </div>
+
+    <section class="card section">
+      <div class="section-head">
+        <h2>전체 종목</h2>
+        <input id="rank-search" type="search" placeholder="종목 검색" aria-label="전체 종목 검색">
       </div>
-      <div class="etf-meta" id="etf-meta"></div>
-      <div class="card table-wrap">
-        <table id="holding-table"></table>
-      </div>
+      <p class="note" id="rank-note"></p>
+      <div class="table-wrap"><table id="rank-table"></table></div>
+      <button class="more-button" id="more-button" type="button" hidden></button>
     </section>
 
     <div class="footer">
-      출처: 네이버 금융 ETF 목록(시가총액), WiseReport ETF CU당 구성종목. 주식수는 CU(설정단위)당 수량입니다.<br>
-      추정금액(억) = 주식수 변화 × (전일 비중 ÷ 전일 주식수) × 전일 ETF 시가총액 ÷ 100, 신규 편입은 당일 비중 기준입니다.<br>
+      출처: 네이버 금융 ETF 목록(시가총액), WiseReport ETF CU당 구성종목(하루 늦게 반영). 주식수는 CU(설정단위)당 수량이고, 현금 항목은 제외했습니다.<br>
+      추정 보유액(억) = 비중 × ETF 시가총액 ÷ 100. 추정 순매수(억) = 주식수 변화 × (전일 비중 ÷ 전일 주식수) × 전일 ETF 시가총액 ÷ 100, 신규 편입은 당일 비중 기준입니다.<br>
+      변동은 수집된 기준일끼리 비교합니다. 수집을 빠뜨린 날의 ETF는 직전 구성 그대로 둡니다.<br>
       <span id="generated-at"></span>
     </div>
   </div>
 
   <script>
-    const TYPE_LABELS = { NEW: "신규", UP: "증가", DOWN: "감소", OUT: "편출" };
-    const CHANGE_COLUMNS = [
-      { key: "etf_name", label: "ETF", kind: "etf" },
-      { key: "market_cap_100m", label: "시총(억)", digits: 0 },
-      { key: "company", label: "종목", kind: "text" },
-      { key: "type", label: "구분", kind: "type" },
-      { key: "weight_before", label: "비중 전(%)", digits: 2 },
-      { key: "weight_after", label: "비중 후(%)", digits: 2 },
-      { key: "change_weight", label: "비중 변화(%p)", digits: 2, signed: true },
-      { key: "shares_before", label: "주식수 전", digits: 0 },
-      { key: "shares_after", label: "주식수 후", digits: 0 },
-      { key: "change_shares", label: "주식수 변화", digits: 0, signed: true },
-      { key: "estimated_amount_100m", label: "추정금액(억)", digits: 2, signed: true },
+    const NON_STOCK = /현금|^원화예금$/;
+    const PAGE_SIZE = 300;
+    const RANGE_OPTIONS = [
+      { value: 1, label: "최근 1거래일" },
+      { value: 5, label: "최근 5거래일" },
+      { value: 20, label: "최근 20거래일" },
+      { value: 60, label: "최근 60거래일" },
+      { value: 0, label: "수집 전체" },
     ];
-    const HOLDING_COLUMNS = [
-      { key: "rank", label: "순위", digits: 0 },
-      { key: "company", label: "종목", kind: "text" },
-      { key: "shares", label: "주식수", digits: 0 },
-      { key: "weight", label: "비중(%)", digits: 2 },
-      { key: "change_shares", label: "전일 대비 주식수", digits: 0, signed: true },
+    const DATE_METRICS = { flow: "추정 순매수(억)", holders: "보유 ETF 수", amount: "추정 보유액(억)" };
+    const DRILL_METRICS = { flow: "추정 매매액(억)", shares: "주식수 변화", weight: "비중(%)" };
+    const TYPE_LABELS = { NEW: "신규", OUT: "편출" };
+    const RANK_COLUMNS = [
+      { key: "pick", label: "선택", kind: "pick" },
+      { key: "name", label: "종목", kind: "name" },
+      { key: "holdersEnd", label: "보유 ETF", digits: 0 },
+      { key: "holdersChange", label: "ETF 수 변화", digits: 0, signed: true, history: true },
+      { key: "amountEnd", label: "추정 보유액(억)", digits: 0 },
+      { key: "flowPeriod", label: "기간 순매수(억)", digits: 1, signed: true, history: true },
+      { key: "buyers", label: "매수 ETF", digits: 0, history: true },
+      { key: "sellers", label: "매도 ETF", digits: 0, history: true },
+      { key: "flowLast", label: "최근일 순매수(억)", digits: 1, signed: true, history: true },
     ];
 
+    const params = new URLSearchParams(window.location.search);
     const state = {
       index: null,
-      date: "",
-      view: "changes",
-      snapshot: null,
-      changes: null,
-      changeRows: [],
-      sort: { key: "estimated_amount_100m", desc: true },
-      holdingSort: { key: "rank", desc: false },
-      type: "",
-      brand: "",
-      query: "",
-      etf: "",
-      holdingQuery: "",
+      snapshots: new Map(),
+      model: null,
+      range: RANGE_OPTIONS.some(option => String(option.value) === params.get("r")) ? Number(params.get("r")) : 20,
+      brand: params.get("b") || "",
+      selected: [...new Set((params.get("s") || "").split(",").map(value => value.trim()).filter(Boolean))],
+      rankQuery: "",
+      rankSort: null,
+      rankLimit: PAGE_SIZE,
+      matrixSort: { key: "count", desc: true },
+      dateMetric: "flow",
+      drillStock: "",
+      drillMetric: "flow",
     };
 
     function escapeHtml(value) {
@@ -381,7 +510,7 @@
     }
 
     function formatNumber(value, digits) {
-      if (value === null || value === undefined || value === "") return "-";
+      if (value === null || value === undefined || Number.isNaN(value)) return "-";
       return Number(value).toLocaleString("ko-KR", {
         minimumFractionDigits: digits,
         maximumFractionDigits: digits,
@@ -389,245 +518,639 @@
     }
 
     function formatSigned(value, digits) {
-      if (value === null || value === undefined) return "-";
       const text = formatNumber(Math.abs(value), digits);
-      if (Number(value) > 0) return `+${text}`;
-      if (Number(value) < 0) return `-${text}`;
-      return text;
+      if (Number(text.replaceAll(",", "")) === 0) return formatNumber(0, digits);
+      return `${value > 0 ? "+" : "-"}${text}`;
     }
 
     function signClass(value) {
-      if (Number(value) > 0) return "pos";
-      if (Number(value) < 0) return "neg";
+      if (value > 0) return "pos";
+      if (value < 0) return "neg";
       return "";
     }
 
+    function shortDate(date) {
+      return date.slice(5).replace("-", "/");
+    }
+
+    function sum(values) {
+      return values.reduce((total, value) => total + value, 0);
+    }
+
+    function maxAbs(seriesList) {
+      let max = 0;
+      for (const series of seriesList) {
+        for (const value of series) max = Math.max(max, Math.abs(value));
+      }
+      return max;
+    }
+
+    function compareValues(left, right, desc) {
+      const result = typeof left === "number" && typeof right === "number"
+        ? left - right
+        : String(left ?? "").localeCompare(String(right ?? ""), "ko");
+      return desc ? -result : result;
+    }
+
+    // Diverging fill: red = estimated net buying, blue = net selling, gray = no trade.
+    function heatStyle(value, max) {
+      if (!value || !max) return "";
+      const strength = Math.round(10 + 45 * Math.sqrt(Math.min(1, Math.abs(value) / max)));
+      const pole = value > 0 ? "var(--up)" : "var(--down)";
+      return ` style="background-color: color-mix(in oklab, ${pole} ${strength}%, var(--heat-zero))"`;
+    }
+
+    function legendHtml(text) {
+      return `<span><span class="swatch" style="background: color-mix(in oklab, var(--down) 55%, var(--heat-zero))"></span>순매도</span>` +
+        `<span><span class="swatch" style="background: var(--heat-zero)"></span>매매 없음</span>` +
+        `<span><span class="swatch" style="background: color-mix(in oklab, var(--up) 55%, var(--heat-zero))"></span>순매수</span>` +
+        `<span>${text}</span>`;
+    }
+
     async function fetchJson(path) {
-      const response = await fetch(path, { cache: "no-store" });
+      const response = await fetch(path, { cache: "no-cache" });
       if (response.status === 404) return null;
       if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
       return response.json();
     }
 
-    function compareValues(a, b, key, desc) {
-      const left = a[key];
-      const right = b[key];
-      let result;
-      if (typeof left === "number" && typeof right === "number") {
-        result = left - right;
-      } else {
-        result = String(left ?? "").localeCompare(String(right ?? ""), "ko");
-      }
-      return desc ? -result : result;
+    function setSubtitle(text) {
+      document.getElementById("subtitle").textContent = text;
     }
 
-    function renderCell(column, row) {
-      const value = row[column.key];
-      if (column.kind === "etf") {
-        return `<td class="text"><button class="etf-button" data-etf="${escapeHtml(row.etf)}" type="button">${escapeHtml(value)}</button></td>`;
-      }
-      if (column.kind === "text") {
-        return `<td class="text">${escapeHtml(value)}</td>`;
-      }
-      if (column.kind === "type") {
-        return `<td class="text"><span class="badge ${value}">${TYPE_LABELS[value] || value}</span></td>`;
-      }
-      if (column.signed) {
-        return `<td class="${signClass(value)}">${formatSigned(value, column.digits)}</td>`;
-      }
-      return `<td>${formatNumber(value, column.digits)}</td>`;
+    function rangeDates() {
+      const all = state.index.pdf_dates;
+      const count = state.range === 0 ? all.length : Math.min(all.length, state.range + 1);
+      return all.slice(0, count).reverse();
     }
 
-    function renderTable(table, columns, rows, sort) {
-      const head = columns.map(column => {
-        const sorted = column.key === sort.key;
-        const arrow = sorted ? (sort.desc ? " ▼" : " ▲") : "";
-        const classes = [column.kind === "text" || column.kind === "etf" || column.kind === "type" ? "text" : "", sorted ? "sorted" : ""].join(" ").trim();
-        return `<th class="${classes}" data-key="${column.key}">${column.label}${arrow}</th>`;
-      }).join("");
-      const body = rows.map(row => `<tr>${columns.map(column => renderCell(column, row)).join("")}</tr>`).join("");
-      table.innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
+    async function ensureSnapshots(dates) {
+      const missing = dates.filter(date => !state.snapshots.has(date));
+      let loaded = 0;
+      await Promise.all(missing.map(async date => {
+        state.snapshots.set(date, (await fetchJson(`data/pdf/${date}.json`)) || { date, etfs: {} });
+        loaded += 1;
+        setSubtitle(`구성종목 불러오는 중... (${loaded}/${missing.length})`);
+      }));
     }
 
-    function filteredChangeRows() {
-      const query = state.query.trim().toLowerCase();
-      return state.changeRows.filter(row => {
-        if (state.type && row.type !== state.type) return false;
-        if (state.brand && row.brand !== state.brand) return false;
-        if (query && !row.etf_name.toLowerCase().includes(query) && !row.company.toLowerCase().includes(query)) return false;
-        return true;
+    function emptyPosition(length) {
+      return {
+        shares: new Float64Array(length),
+        weight: new Float64Array(length),
+        amount: new Float64Array(length),
+        delta: new Float64Array(length),
+        flow: new Float64Array(length),
+      };
+    }
+
+    function summarizeStock(stock, length) {
+      const last = length - 1;
+      const series = {
+        holders: new Array(length).fill(0),
+        amount: new Array(length).fill(0),
+        flow: new Array(length).fill(0),
+        buyers: new Array(length).fill(0),
+        sellers: new Array(length).fill(0),
+      };
+      let buyers = 0;
+      let sellers = 0;
+      for (const position of stock.byEtf.values()) {
+        for (let index = 0; index < length; index += 1) {
+          if (position.shares[index] > 0) series.holders[index] += 1;
+          series.amount[index] += position.amount[index];
+          series.flow[index] += position.flow[index];
+          if (position.delta[index] > 0) series.buyers[index] += 1;
+          if (position.delta[index] < 0) series.sellers[index] += 1;
+        }
+        const netShares = sum(position.delta);
+        if (netShares > 0) buyers += 1;
+        if (netShares < 0) sellers += 1;
+      }
+      Object.assign(stock, {
+        series,
+        holdersEnd: series.holders[last],
+        holdersChange: series.holders[last] - series.holders[0],
+        amountEnd: series.amount[last],
+        flowPeriod: sum(series.flow),
+        flowLast: series.flow[last],
+        buyers,
+        sellers,
       });
     }
 
-    function renderChanges() {
-      const table = document.getElementById("change-table");
-      const message = document.getElementById("change-message");
-      if (!state.changes) {
-        table.innerHTML = "";
-        message.hidden = false;
-        const first = state.index.pdf_dates[state.index.pdf_dates.length - 1];
-        message.innerHTML = `${escapeHtml(state.date)} 기준 변동표가 없습니다.<br>변동은 전일 구성종목과 비교해 계산하므로 수집 시작일(${escapeHtml(first)}) 다음 날짜부터 표시됩니다.<br>지금은 'ETF 구성종목' 탭에서 각 ETF의 전체 구성을 볼 수 있습니다.`;
-        ["stat-count", "stat-new-out", "stat-buy", "stat-sell"].forEach(id => {
-          document.getElementById(id).textContent = "-";
+    function buildModel(dates) {
+      const length = dates.length;
+      const etfs = new Map();
+      const stocks = new Map();
+      const lastSeen = new Map();
+
+      const positionOf = (name, code) => {
+        if (!stocks.has(name)) stocks.set(name, { name, byEtf: new Map() });
+        const byEtf = stocks.get(name).byEtf;
+        if (!byEtf.has(code)) byEtf.set(code, emptyPosition(length));
+        return byEtf.get(code);
+      };
+      const place = (code, index, holdings, marketCap) => {
+        for (const [name, [shares, weight]] of holdings) {
+          const position = positionOf(name, code);
+          position.shares[index] = shares;
+          position.weight[index] = weight;
+          position.amount[index] = weight * marketCap / 100;
+        }
+      };
+
+      dates.forEach((date, index) => {
+        const present = new Set();
+        for (const [code, etf] of Object.entries(state.snapshots.get(date)?.etfs || {})) {
+          if (state.brand && etf.brand !== state.brand) continue;
+          present.add(code);
+          const holdings = new Map();
+          for (const [name, shares, weight] of etf.holdings) {
+            if (shares > 0 && !NON_STOCK.test(name)) holdings.set(name, [shares, weight]);
+          }
+          etfs.set(code, { code, name: etf.name, brand: etf.brand, marketCap: etf.market_cap_100m });
+          place(code, index, holdings, etf.market_cap_100m);
+
+          const previous = lastSeen.get(code);
+          if (previous) {
+            for (const name of new Set([...previous.holdings.keys(), ...holdings.keys()])) {
+              const [sharesBefore, weightBefore] = previous.holdings.get(name) || [0, 0];
+              const [sharesAfter, weightAfter] = holdings.get(name) || [0, 0];
+              const delta = sharesAfter - sharesBefore;
+              if (delta === 0) continue;
+              // Value the traded shares at the previous day's weight per share
+              // (the new day's for new positions), scaled by the previous ETF market cap.
+              const unitWeight = sharesBefore ? weightBefore / sharesBefore : weightAfter / sharesAfter;
+              const position = positionOf(name, code);
+              position.delta[index] = delta;
+              position.flow[index] = delta * unitWeight * previous.marketCap / 100;
+            }
+          }
+          lastSeen.set(code, { holdings, marketCap: etf.market_cap_100m });
+        }
+        // An ETF missing from one collection keeps its last known holdings instead of looking sold out.
+        for (const [code, previous] of lastSeen) {
+          if (!present.has(code)) place(code, index, previous.holdings, previous.marketCap);
+        }
+      });
+
+      for (const stock of stocks.values()) summarizeStock(stock, length);
+      return { dates, etfs, stocks, last: length - 1, hasHistory: length > 1 };
+    }
+
+    function syncUrl() {
+      const next = new URLSearchParams();
+      if (state.selected.length) next.set("s", state.selected.join(","));
+      if (state.range !== 20) next.set("r", String(state.range));
+      if (state.brand) next.set("b", state.brand);
+      const query = next.toString();
+      window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
+    }
+
+    function resolveStock(text) {
+      const { stocks } = state.model;
+      if (stocks.has(text)) return text;
+      const lower = text.toLowerCase();
+      const names = [...stocks.values()].sort((a, b) => b.amountEnd - a.amountEnd).map(stock => stock.name);
+      return names.find(name => name.toLowerCase() === lower) || names.find(name => name.toLowerCase().includes(lower)) || null;
+    }
+
+    function addStocks(text) {
+      const missing = [];
+      for (const part of text.split(",").map(value => value.trim()).filter(Boolean)) {
+        const name = resolveStock(part);
+        if (!name) {
+          missing.push(part);
+        } else if (!state.selected.includes(name)) {
+          state.selected.push(name);
+        }
+      }
+      const message = document.getElementById("input-message");
+      message.hidden = !missing.length;
+      message.textContent = missing.length ? `보유 ETF가 없는 종목입니다: ${missing.join(", ")}` : "";
+      onSelectionChange();
+    }
+
+    function toggleStock(name) {
+      state.selected = state.selected.includes(name)
+        ? state.selected.filter(value => value !== name)
+        : [...state.selected, name];
+      onSelectionChange();
+    }
+
+    function onSelectionChange() {
+      if (!state.selected.includes(state.drillStock)) state.drillStock = state.selected[0] || "";
+      syncUrl();
+      renderSelection();
+      renderRanking();
+    }
+
+    function renderSelectedRow() {
+      const row = document.getElementById("selected-row");
+      if (!state.selected.length) {
+        row.innerHTML = `<span class="hint">종목을 추가하거나 아래 전체 종목에서 체크하면, 어느 ETF가 들고 있는지와 날짜별 매매가 나옵니다.</span>`;
+        return;
+      }
+      row.innerHTML = state.selected
+        .map(name => {
+          const holders = state.model.stocks.get(name)?.holdersEnd ?? 0;
+          return `<button class="stock-chip" data-name="${escapeHtml(name)}" type="button" title="빼기">${escapeHtml(name)} <span>ETF ${holders} ×</span></button>`;
+        })
+        .join("") + `<button class="text-button" id="clear-button" type="button">모두 지우기</button>`;
+    }
+
+    function cellInfo(position, last) {
+      if (!position) return null;
+      const sharesStart = position.shares[0];
+      const sharesEnd = position.shares[last];
+      const netShares = sum(position.delta);
+      let status = "";
+      if (sharesEnd > 0 && sharesStart === 0) status = "NEW";
+      if (sharesEnd === 0 && sharesStart > 0) status = "OUT";
+      return {
+        sharesEnd,
+        weightEnd: position.weight[last],
+        amountEnd: position.amount[last],
+        flow: sum(position.flow),
+        netShares,
+        status,
+      };
+    }
+
+    function matrixRows() {
+      const { etfs, stocks, last } = state.model;
+      const rows = [];
+      for (const etf of etfs.values()) {
+        const cells = state.selected.map(name => cellInfo(stocks.get(name)?.byEtf.get(etf.code), last));
+        if (!cells.some(Boolean)) continue;
+        rows.push({
+          etf,
+          cells,
+          count: cells.filter(cell => cell?.sharesEnd > 0).length,
+          total: sum(cells.map(cell => cell?.amountEnd || 0)),
         });
-        return;
       }
+      const { key, desc } = state.matrixSort;
+      const value = row => {
+        if (key === "etf") return row.etf.name;
+        if (key === "brand") return row.etf.brand;
+        if (key === "marketCap") return row.etf.marketCap;
+        if (key.startsWith("stock:")) return row.cells[Number(key.slice(6))]?.amountEnd || 0;
+        return row.count;
+      };
+      return rows.sort((a, b) => compareValues(value(a), value(b), desc) || b.total - a.total);
+    }
 
-      const rows = filteredChangeRows().sort((a, b) => compareValues(a, b, state.sort.key, state.sort.desc));
-      const buy = rows.filter(row => row.estimated_amount_100m > 0).reduce((sum, row) => sum + row.estimated_amount_100m, 0);
-      const sell = rows.filter(row => row.estimated_amount_100m < 0).reduce((sum, row) => sum + row.estimated_amount_100m, 0);
-      document.getElementById("stat-count").textContent = formatNumber(rows.length, 0);
-      document.getElementById("stat-new-out").textContent =
-        `${rows.filter(row => row.type === "NEW").length} / ${rows.filter(row => row.type === "OUT").length}`;
-      document.getElementById("stat-buy").textContent = formatSigned(buy, 1);
-      document.getElementById("stat-sell").textContent = formatSigned(sell, 1);
+    function matrixCell(cell, etf, name) {
+      if (!cell) return `<td class="muted">-</td>`;
+      const badge = TYPE_LABELS[cell.status] ? `<span class="badge ${cell.status}">${TYPE_LABELS[cell.status]}</span>` : "";
+      const main = cell.sharesEnd > 0 ? `${formatNumber(cell.weightEnd, 2)}%` : `<span class="muted">보유 없음</span>`;
+      const details = [];
+      if (cell.sharesEnd > 0) details.push(`${formatNumber(cell.amountEnd, 1)}억`);
+      if (state.model.hasHistory && cell.flow) details.push(`<span class="${signClass(cell.flow)}">${formatSigned(cell.flow, 1)}억</span>`);
+      const title = `${etf.name} · ${name}\nCU당 ${formatNumber(cell.sharesEnd, 0)}주` +
+        (state.model.hasHistory ? ` (기간 ${formatSigned(cell.netShares, 0)}주)` : "");
+      return `<td title="${escapeHtml(title)}">${badge}${main}<span class="sub">${details.join(" · ") || "&nbsp;"}</span></td>`;
+    }
 
-      renderTable(table, CHANGE_COLUMNS, rows, state.sort);
+    function sortHeader(label, key, sort, extraClass = "") {
+      const sorted = sort.key === key;
+      const classes = ["sortable", extraClass, sorted ? "sorted" : ""].join(" ").trim();
+      return `<th class="${classes}" data-key="${escapeHtml(key)}">${escapeHtml(label)}${sorted ? (sort.desc ? " ▼" : " ▲") : ""}</th>`;
+    }
+
+    function renderMatrix() {
+      const table = document.getElementById("matrix-table");
+      const message = document.getElementById("matrix-message");
+      const rows = matrixRows();
+      const sort = state.matrixSort;
+      const stocks = state.selected.map(name => state.model.stocks.get(name));
       message.hidden = rows.length > 0;
-      message.textContent = rows.length ? "" : "조건에 맞는 변동이 없습니다.";
-    }
-
-    function holdingRows() {
-      const etf = state.snapshot?.etfs?.[state.etf];
-      if (!etf) return [];
-      const changeByCompany = new Map(
-        state.changeRows.filter(row => row.etf === state.etf).map(row => [row.company, row.change_shares])
-      );
-      const hasBefore = Boolean(state.changes?.etfs?.[state.etf]);
-      const rows = etf.holdings
-        .map(([company, shares, weight]) => ({ company, shares, weight }))
-        .sort((a, b) => b.weight - a.weight || b.shares - a.shares)
-        .map((row, position) => ({
-          ...row,
-          rank: position + 1,
-          change_shares: hasBefore ? (changeByCompany.get(row.company) ?? 0) : null,
-        }));
-      const query = state.holdingQuery.trim().toLowerCase();
-      return query ? rows.filter(row => row.company.toLowerCase().includes(query)) : rows;
-    }
-
-    function renderHoldings() {
-      const etf = state.snapshot?.etfs?.[state.etf];
-      const meta = document.getElementById("etf-meta");
-      if (!etf) {
-        meta.textContent = "선택한 날짜에 이 ETF의 구성종목이 없습니다.";
-        document.getElementById("holding-table").innerHTML = "";
+      message.textContent = rows.length ? "" : "선택한 종목을 보유한 ETF가 없습니다.";
+      if (!rows.length) {
+        table.innerHTML = "";
         return;
       }
-      const beforeDate = state.changes?.etfs?.[state.etf]?.before_date;
-      meta.textContent = `${etf.brand} · ${etf.category} · 시총 ${formatNumber(etf.market_cap_100m, 0)}억 · 구성 ${etf.holdings.length}종목 · 기준일 ${state.date}` +
-        (beforeDate ? ` (비교 ${beforeDate})` : "");
-      const rows = holdingRows().sort((a, b) => compareValues(a, b, state.holdingSort.key, state.holdingSort.desc));
-      renderTable(document.getElementById("holding-table"), HOLDING_COLUMNS, rows, state.holdingSort);
+
+      const head = sortHeader("ETF", "etf", sort, "text sticky-col") +
+        sortHeader("운용사", "brand", sort, "text") +
+        sortHeader("시총(억)", "marketCap", sort) +
+        sortHeader("보유", "count", sort) +
+        state.selected.map((name, position) => sortHeader(name, `stock:${position}`, sort)).join("");
+      const totals = stocks.map(stock => {
+        if (!stock) return `<td class="muted">-</td>`;
+        const flow = state.model.hasHistory
+          ? ` · <span class="${signClass(stock.flowPeriod)}">${formatSigned(stock.flowPeriod, 1)}억</span>`
+          : "";
+        return `<td>ETF ${stock.holdersEnd}개<span class="sub">${formatNumber(stock.amountEnd, 0)}억${flow}</span></td>`;
+      }).join("");
+      const totalRow = `<tr class="total"><td class="text sticky-col">선택 종목 합계</td><td></td><td></td><td></td>${totals}</tr>`;
+      const body = rows.map(row => {
+        const full = state.selected.length > 1 && row.count === state.selected.length;
+        return `<tr class="${full ? "full" : ""}">` +
+          `<td class="text sticky-col"><a class="etf-link" href="https://finance.naver.com/item/main.naver?code=${escapeHtml(row.etf.code)}" target="_blank" rel="noopener">${escapeHtml(row.etf.name)}</a></td>` +
+          `<td class="text">${escapeHtml(row.etf.brand)}</td>` +
+          `<td>${formatNumber(row.etf.marketCap, 0)}</td>` +
+          `<td>${row.count}/${state.selected.length}</td>` +
+          row.cells.map((cell, position) => matrixCell(cell, row.etf, state.selected[position])).join("") +
+          `</tr>`;
+      }).join("");
+      table.innerHTML = `<thead><tr>${head}</tr></thead><tbody>${totalRow}${body}</tbody>`;
     }
 
-    function render() {
-      document.getElementById("view-changes").hidden = state.view !== "changes";
-      document.getElementById("view-holdings").hidden = state.view !== "holdings";
-      document.querySelectorAll(".tab").forEach(tab => {
-        tab.classList.toggle("active", tab.dataset.view === state.view);
-      });
-      if (state.view === "changes") {
-        renderChanges();
-      } else {
-        renderHoldings();
-      }
-    }
-
-    function populateSelects() {
-      const etfs = Object.entries(state.snapshot?.etfs || {})
-        .map(([code, etf]) => ({ code, ...etf }))
-        .sort((a, b) => b.market_cap_100m - a.market_cap_100m);
-
-      const brands = [...new Set(etfs.map(etf => etf.brand))].sort((a, b) => a.localeCompare(b, "ko"));
-      if (state.brand && !brands.includes(state.brand)) state.brand = "";
-      document.getElementById("brand-filter").innerHTML =
-        `<option value="">전체 운용사</option>` +
-        brands.map(brand => `<option value="${escapeHtml(brand)}"${brand === state.brand ? " selected" : ""}>${escapeHtml(brand)}</option>`).join("");
-
-      if (!state.etf || !state.snapshot?.etfs?.[state.etf]) state.etf = etfs[0]?.code || "";
-      document.getElementById("etf-select").innerHTML = etfs
-        .map(etf => `<option value="${escapeHtml(etf.code)}"${etf.code === state.etf ? " selected" : ""}>${escapeHtml(etf.name)} (${formatNumber(etf.market_cap_100m, 0)}억)</option>`)
+    function chipsHtml(options, active, attribute) {
+      return Object.entries(options)
+        .map(([value, label]) => `<button class="chip${value === active ? " active" : ""}" data-${attribute}="${escapeHtml(value)}" type="button">${escapeHtml(label)}</button>`)
         .join("");
     }
 
-    async function loadDate(date) {
-      state.date = date;
-      const version = encodeURIComponent(state.index.generated_at);
-      const hasChanges = state.index.change_dates.includes(date);
-      const [snapshot, changes] = await Promise.all([
-        fetchJson(`data/pdf/${date}.json?v=${version}`),
-        hasChanges ? fetchJson(`data/changes/${date}.json?v=${version}`) : Promise.resolve(null),
-      ]);
-      state.snapshot = snapshot;
-      state.changes = changes;
-      state.changeRows = (changes?.rows || []).map(row => {
-        const etf = changes.etfs[row.etf] || {};
-        return { ...row, etf_name: etf.name || row.etf, brand: etf.brand || "", market_cap_100m: etf.market_cap_100m };
-      });
+    function historyMessage() {
+      const dates = state.index.pdf_dates;
+      return `날짜별 변동은 기준일이 2개 이상일 때 계산됩니다. 지금은 ${escapeHtml(dates[dates.length - 1])} 하루치만 있습니다.<br>` +
+        `매일 08:00·20:00(KST)에 자동으로 수집하며, 다음 기준일이 들어오면 여기에 매매 흐름이 쌓입니다.`;
+    }
 
-      const etfCount = Object.keys(snapshot?.etfs || {}).length;
-      const beforeDates = [...new Set(Object.values(changes?.etfs || {}).map(etf => etf.before_date))].sort();
-      document.getElementById("subtitle").textContent = changes
-        ? `${beforeDates.join(", ")} → ${date} | ETF ${etfCount}개 | 변동 ${changes.rows.length}건`
-        : `${date} 구성종목 | ETF ${etfCount}개`;
-      populateSelects();
-      render();
+    function dateHeaders(indices) {
+      return indices
+        .map(index => {
+          const date = state.model.dates[index];
+          return `<th title="${date}">${shortDate(date)}${index === 0 ? '<span class="sub">비교 기준</span>' : ""}</th>`;
+        })
+        .join("");
+    }
+
+    function renderDateTable() {
+      const { dates, stocks, hasHistory, last } = state.model;
+      const table = document.getElementById("date-table");
+      const message = document.getElementById("date-message");
+      document.getElementById("date-metric").innerHTML = chipsHtml(DATE_METRICS, state.dateMetric, "metric");
+      document.getElementById("date-legend").innerHTML = legendHtml("셀 색은 그날 선택 종목의 추정 순매수(진할수록 큼)입니다. 셀에 올리면 매수·매도 ETF 수가 보입니다.");
+      message.hidden = hasHistory;
+      message.innerHTML = hasHistory ? "" : historyMessage();
+      if (!hasHistory) {
+        table.innerHTML = "";
+        return;
+      }
+
+      const indices = dates.map((_, index) => index).reverse();
+      const selected = state.selected.map(name => stocks.get(name)).filter(Boolean);
+      const maxFlow = maxAbs(selected.map(stock => stock.series.flow));
+      const metric = state.dateMetric;
+      const periodCell = stock => {
+        const value = metric === "flow" ? stock.flowPeriod
+          : metric === "holders" ? stock.holdersChange
+          : stock.series.amount[last] - stock.series.amount[0];
+        const digits = metric === "holders" ? 0 : metric === "flow" ? 1 : 0;
+        return `<td class="${signClass(value)}"><b>${formatSigned(value, digits)}</b></td>`;
+      };
+      const cell = (stock, index) => {
+        const { holders, amount, flow, buyers, sellers } = stock.series;
+        const title = `${dates[index]} ${stock.name}\n` +
+          (index > 0 ? `추정 순매수 ${formatSigned(flow[index], 1)}억 (매수 ETF ${buyers[index]} · 매도 ETF ${sellers[index]})\n` : "") +
+          `보유 ETF ${holders[index]}개 · 추정 보유액 ${formatNumber(amount[index], 0)}억`;
+        let text;
+        if (metric === "flow") {
+          text = index === 0 ? `<span class="muted">-</span>` : flow[index] ? formatSigned(flow[index], 1) : `<span class="muted">0</span>`;
+        } else if (metric === "holders") {
+          const change = index > 0 ? holders[index] - holders[index - 1] : 0;
+          text = `${holders[index]}${change ? `<span class="sub">${formatSigned(change, 0)}</span>` : ""}`;
+        } else {
+          text = formatNumber(amount[index], 0);
+        }
+        return `<td class="heat" title="${escapeHtml(title)}"${index > 0 ? heatStyle(flow[index], maxFlow) : ""}>${text}</td>`;
+      };
+
+      const head = `<th class="text sticky-col">종목</th><th>기간 변화</th>${dateHeaders(indices)}`;
+      const body = state.selected.map(name => {
+        const stock = stocks.get(name);
+        if (!stock) {
+          return `<tr><td class="text sticky-col">${escapeHtml(name)}</td><td class="muted" colspan="${indices.length + 1}">보유 ETF 없음</td></tr>`;
+        }
+        return `<tr><td class="text sticky-col">${escapeHtml(name)}</td>${periodCell(stock)}${indices.map(index => cell(stock, index)).join("")}</tr>`;
+      }).join("");
+      table.innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
+    }
+
+    function renderDrillTable() {
+      const { dates, etfs, stocks, hasHistory, last } = state.model;
+      const table = document.getElementById("drill-table");
+      const message = document.getElementById("drill-message");
+      const stockOptions = Object.fromEntries(state.selected.map(name => [name, name]));
+      document.getElementById("drill-stock").innerHTML = chipsHtml(stockOptions, state.drillStock, "stock");
+      document.getElementById("drill-metric").innerHTML = chipsHtml(DRILL_METRICS, state.drillMetric, "metric");
+      document.getElementById("drill-legend").innerHTML = legendHtml("셀 색은 그 ETF의 추정 매매액입니다. 신규 = 새로 편입, 편출 = 전량 매도.");
+      const stock = stocks.get(state.drillStock);
+      message.hidden = hasHistory && Boolean(stock);
+      message.innerHTML = !hasHistory ? historyMessage() : stock ? "" : "선택한 종목을 보유한 ETF가 없습니다.";
+      if (!hasHistory || !stock) {
+        table.innerHTML = "";
+        return;
+      }
+
+      const indices = dates.map((_, index) => index).reverse();
+      const rows = [...stock.byEtf.entries()]
+        .map(([code, position]) => ({ etf: etfs.get(code), position, flow: sum(position.flow) }))
+        .sort((a, b) => b.position.amount[last] - a.position.amount[last] || b.flow - a.flow);
+      const maxFlow = maxAbs(rows.map(row => row.position.flow));
+      const cell = (row, index) => {
+        const { shares, weight, delta, flow } = row.position;
+        const isNew = index > 0 && delta[index] > 0 && shares[index - 1] === 0;
+        const isOut = index > 0 && delta[index] < 0 && shares[index] === 0;
+        const badge = isNew ? `<span class="badge NEW">신규</span>` : isOut ? `<span class="badge OUT">편출</span>` : "";
+        let text = "";
+        if (state.drillMetric === "flow") {
+          text = index === 0 ? `<span class="muted">-</span>` : flow[index] ? formatSigned(flow[index], 2) : "";
+        } else if (state.drillMetric === "shares") {
+          text = delta[index] ? formatSigned(delta[index], 0) : "";
+        } else {
+          text = shares[index] > 0 ? formatNumber(weight[index], 2) : `<span class="muted">-</span>`;
+        }
+        const title = `${dates[index]} ${row.etf.name}\nCU당 ${formatNumber(shares[index], 0)}주` +
+          (index > 0 ? ` (변화 ${formatSigned(delta[index], 0)}주) · 추정 매매액 ${formatSigned(flow[index], 2)}억` : "") +
+          ` · 비중 ${formatNumber(weight[index], 2)}%`;
+        return `<td class="heat" title="${escapeHtml(title)}"${heatStyle(flow[index], maxFlow)}>${badge}${text}</td>`;
+      };
+
+      const head = `<th class="text sticky-col">ETF</th><th>현재 비중(%)</th><th>기간 순매수(억)</th>${dateHeaders(indices)}`;
+      const body = rows.map(row => {
+        const { shares, weight } = row.position;
+        return `<tr><td class="text sticky-col">${escapeHtml(row.etf.name)}</td>` +
+          `<td>${shares[last] > 0 ? formatNumber(weight[last], 2) : '<span class="muted">-</span>'}</td>` +
+          (row.flow ? `<td class="${signClass(row.flow)}">${formatSigned(row.flow, 2)}</td>` : `<td class="muted">0</td>`) +
+          `${indices.map(index => cell(row, index)).join("")}</tr>`;
+      }).join("");
+      table.innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
+    }
+
+    function renderSelection() {
+      renderSelectedRow();
+      const hasSelection = state.selected.length > 0;
+      document.getElementById("selected-view").hidden = !hasSelection;
+      if (!hasSelection) return;
+      renderMatrix();
+      renderDateTable();
+      renderDrillTable();
+    }
+
+    function renderRanking() {
+      const { stocks, hasHistory } = state.model;
+      const sort = state.rankSort || (hasHistory ? { key: "flowPeriod", desc: true } : { key: "holdersEnd", desc: true });
+      const query = state.rankQuery.trim().toLowerCase();
+      const rows = [...stocks.values()]
+        .filter(stock => !query || stock.name.toLowerCase().includes(query))
+        .sort((a, b) => compareValues(a[sort.key], b[sort.key], sort.desc) || b.amountEnd - a.amountEnd);
+      const visible = rows.slice(0, state.rankLimit);
+      const columns = RANK_COLUMNS.filter(column => hasHistory || !column.history);
+      const selected = new Set(state.selected);
+
+      const head = columns
+        .map(column => column.kind === "pick"
+          ? `<th class="pick">${column.label}</th>`
+          : sortHeader(column.label, column.key, sort, column.kind === "name" ? "text" : ""))
+        .join("");
+      const body = visible.map(stock => `<tr>${columns.map(column => {
+        if (column.kind === "pick") {
+          return `<td class="pick"><input type="checkbox" data-name="${escapeHtml(stock.name)}"${selected.has(stock.name) ? " checked" : ""} aria-label="${escapeHtml(stock.name)} 선택"></td>`;
+        }
+        if (column.kind === "name") {
+          return `<td class="text"><button class="name-button" data-name="${escapeHtml(stock.name)}" type="button">${escapeHtml(stock.name)}</button></td>`;
+        }
+        const value = stock[column.key];
+        return column.signed
+          ? `<td class="${signClass(value)}">${formatSigned(value, column.digits)}</td>`
+          : `<td>${formatNumber(value, column.digits)}</td>`;
+      }).join("")}</tr>`).join("");
+      document.getElementById("rank-table").innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
+
+      const note = `종목 ${formatNumber(rows.length, 0)}개 중 ${formatNumber(visible.length, 0)}개 표시. 체크하거나 종목명을 누르면 위에서 비교합니다.`;
+      document.getElementById("rank-note").textContent = hasHistory
+        ? note
+        : `${note} 기간 순매수·매수/매도 ETF 열은 기준일이 2개 이상 쌓이면 나타납니다.`;
+      const more = document.getElementById("more-button");
+      more.hidden = rows.length <= visible.length;
+      more.textContent = `더 보기 (${formatNumber(rows.length - visible.length, 0)}개 남음)`;
+    }
+
+    function renderAll() {
+      const { dates, etfs, stocks, hasHistory } = state.model;
+      const end = dates[dates.length - 1];
+      setSubtitle(
+        `기준일 ${end} · ETF ${etfs.size}개 · 종목 ${formatNumber(stocks.size, 0)}개` +
+        (hasHistory ? ` · 비교 ${dates[0]} → ${end} (${dates.length - 1}거래일)` : " · 변동 비교는 기준일이 2개 이상 쌓이면 표시")
+      );
+      const names = [...stocks.values()].sort((a, b) => b.holdersEnd - a.holdersEnd || b.amountEnd - a.amountEnd);
+      document.getElementById("stock-list").innerHTML = names
+        .map(stock => `<option value="${escapeHtml(stock.name)}">ETF ${stock.holdersEnd}개</option>`)
+        .join("");
+      renderSelection();
+      renderRanking();
+    }
+
+    async function reload() {
+      const dates = rangeDates();
+      await ensureSnapshots(dates);
+      state.model = buildModel(dates);
+      if (!state.selected.includes(state.drillStock)) state.drillStock = state.selected[0] || "";
+      renderAll();
+    }
+
+    function populateControls() {
+      document.getElementById("range-select").innerHTML = RANGE_OPTIONS
+        .map(option => `<option value="${option.value}"${option.value === state.range ? " selected" : ""}>${option.label}</option>`)
+        .join("");
+      const latest = state.snapshots.get(state.index.pdf_dates[0]);
+      const brands = [...new Set(Object.values(latest?.etfs || {}).map(etf => etf.brand))].sort((a, b) => a.localeCompare(b, "ko"));
+      if (state.brand && !brands.includes(state.brand)) state.brand = "";
+      document.getElementById("brand-select").innerHTML =
+        `<option value="">전체 운용사</option>` +
+        brands.map(brand => `<option value="${escapeHtml(brand)}"${brand === state.brand ? " selected" : ""}>${escapeHtml(brand)}</option>`).join("");
     }
 
     function initEvents() {
-      document.getElementById("date-select").addEventListener("change", event => loadDate(event.target.value));
-      document.querySelectorAll(".tab").forEach(tab => {
-        tab.addEventListener("click", () => {
-          state.view = tab.dataset.view;
-          render();
-        });
+      const input = document.getElementById("stock-input");
+      document.getElementById("stock-form").addEventListener("submit", event => {
+        event.preventDefault();
+        if (!state.model || !input.value.trim()) return;
+        addStocks(input.value);
+        input.value = "";
       });
-      document.getElementById("change-search").addEventListener("input", event => {
-        state.query = event.target.value;
-        renderChanges();
+      input.addEventListener("input", event => {
+        // Picking a datalist suggestion adds it right away; typed (IME) text waits for Enter.
+        const picked = !event.inputType || event.inputType === "insertReplacementText";
+        if (picked && state.model?.stocks.has(input.value)) {
+          addStocks(input.value);
+          input.value = "";
+        }
       });
-      document.getElementById("brand-filter").addEventListener("change", event => {
-        state.brand = event.target.value;
-        renderChanges();
-      });
-      document.querySelectorAll("#type-filter .chip").forEach(chip => {
-        chip.addEventListener("click", () => {
-          state.type = chip.dataset.type;
-          document.querySelectorAll("#type-filter .chip").forEach(item => item.classList.toggle("active", item === chip));
-          renderChanges();
-        });
-      });
-      document.getElementById("change-table").addEventListener("click", event => {
-        const etfButton = event.target.closest(".etf-button");
-        if (etfButton) {
-          state.etf = etfButton.dataset.etf;
-          document.getElementById("etf-select").value = state.etf;
-          state.view = "holdings";
-          render();
+      document.getElementById("selected-row").addEventListener("click", event => {
+        if (event.target.closest("#clear-button")) {
+          state.selected = [];
+          onSelectionChange();
           return;
         }
-        const header = event.target.closest("th");
-        if (header) {
-          const key = header.dataset.key;
-          state.sort = { key, desc: state.sort.key === key ? !state.sort.desc : true };
-          renderChanges();
+        const chip = event.target.closest(".stock-chip");
+        if (chip) toggleStock(chip.dataset.name);
+      });
+      document.getElementById("range-select").addEventListener("change", async event => {
+        state.range = Number(event.target.value);
+        syncUrl();
+        await reload();
+      });
+      document.getElementById("brand-select").addEventListener("change", event => {
+        state.brand = event.target.value;
+        syncUrl();
+        reload();
+      });
+      document.getElementById("rank-search").addEventListener("input", event => {
+        state.rankQuery = event.target.value;
+        state.rankLimit = PAGE_SIZE;
+        renderRanking();
+      });
+      document.getElementById("more-button").addEventListener("click", () => {
+        state.rankLimit += PAGE_SIZE;
+        renderRanking();
+      });
+      document.getElementById("rank-table").addEventListener("click", event => {
+        const target = event.target.closest("[data-name]");
+        if (target) {
+          toggleStock(target.dataset.name);
+          return;
         }
-      });
-      document.getElementById("etf-select").addEventListener("change", event => {
-        state.etf = event.target.value;
-        renderHoldings();
-      });
-      document.getElementById("holding-search").addEventListener("input", event => {
-        state.holdingQuery = event.target.value;
-        renderHoldings();
-      });
-      document.getElementById("holding-table").addEventListener("click", event => {
-        const header = event.target.closest("th");
+        const header = event.target.closest("th.sortable");
         if (!header) return;
         const key = header.dataset.key;
-        state.holdingSort = { key, desc: state.holdingSort.key === key ? !state.holdingSort.desc : key !== "rank" };
-        renderHoldings();
+        const current = state.rankSort;
+        state.rankSort = { key, desc: current?.key === key ? !current.desc : key !== "name" };
+        renderRanking();
+      });
+      document.getElementById("matrix-table").addEventListener("click", event => {
+        const header = event.target.closest("th.sortable");
+        if (!header) return;
+        const key = header.dataset.key;
+        state.matrixSort = {
+          key,
+          desc: state.matrixSort.key === key ? !state.matrixSort.desc : !["etf", "brand"].includes(key),
+        };
+        renderMatrix();
+      });
+      document.getElementById("date-metric").addEventListener("click", event => {
+        const chip = event.target.closest("[data-metric]");
+        if (!chip) return;
+        state.dateMetric = chip.dataset.metric;
+        renderDateTable();
+      });
+      document.getElementById("drill-stock").addEventListener("click", event => {
+        const chip = event.target.closest("[data-stock]");
+        if (!chip) return;
+        state.drillStock = chip.dataset.stock;
+        renderDrillTable();
+      });
+      document.getElementById("drill-metric").addEventListener("click", event => {
+        const chip = event.target.closest("[data-metric]");
+        if (!chip) return;
+        state.drillMetric = chip.dataset.metric;
+        renderDrillTable();
       });
     }
 
@@ -636,13 +1159,13 @@
       try {
         state.index = await fetchJson("data/index.json");
         if (!state.index || !state.index.pdf_dates.length) throw new Error("수집된 데이터가 없습니다.");
-        document.getElementById("date-select").innerHTML = state.index.pdf_dates
-          .map(date => `<option value="${date}">${date}${state.index.change_dates.includes(date) ? "" : " (구성종목만)"}</option>`)
-          .join("");
-        document.getElementById("generated-at").textContent = `데이터 갱신: ${state.index.generated_at.slice(0, 19).replace("T", " ")} KST`;
-        await loadDate(state.index.pdf_dates[0]);
+        document.getElementById("generated-at").textContent =
+          `데이터 갱신: ${state.index.generated_at.slice(0, 19).replace("T", " ")} KST`;
+        await ensureSnapshots([state.index.pdf_dates[0]]);
+        populateControls();
+        await reload();
       } catch (error) {
-        document.getElementById("subtitle").textContent = `데이터를 불러오지 못했습니다: ${error.message}`;
+        setSubtitle(`데이터를 불러오지 못했습니다: ${error.message}`);
       }
     }
 

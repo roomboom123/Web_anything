@@ -60,7 +60,7 @@ def collect_snapshots(delay_seconds: float) -> dict[str, dict[str, dict[str, Any
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Collect active ETF holdings and rebuild the daily change tables."
+        description="Collect active ETF holdings into daily snapshots."
     )
     parser.add_argument(
         "--data-dir",
@@ -76,19 +76,12 @@ def main() -> None:
     for trade_date, etfs in sorted(by_date.items()):
         store.upsert_snapshot(trade_date, etfs)
 
-    # A new snapshot can become the "before" side of any later date, so rebuild from the earliest touched date.
-    first_touched = min(by_date)
-    for trade_date in store.pdf_dates():
-        if trade_date >= first_touched and store.write_changes(trade_date):
-            logger.info("Wrote changes for %s", trade_date)
-
     pdf_dates = store.pdf_dates()
     write_json(
         args.data_dir / "index.json",
         {
             "generated_at": datetime.now(KST).isoformat(timespec="seconds"),
             "pdf_dates": pdf_dates[::-1],
-            "change_dates": store.change_dates()[::-1],
             "latest_etf_count": len(store.load_snapshot(pdf_dates[-1])["etfs"]),
         },
     )

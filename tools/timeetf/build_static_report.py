@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 from datetime import datetime
 from pathlib import Path
 
 import requests
-from bs4 import BeautifulSoup
 
 from timeetf_tracker import load_dataset
 
@@ -21,60 +21,29 @@ def fetch_naver_price_history(
     stock_code: str,
     start_date: str,
     end_date: str,
-    max_pages: int = 20,
 ) -> list[dict]:
-    session = requests.Session()
-    session.headers.update({"User-Agent": "Mozilla/5.0"})
-    start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
-    end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+    # finance.naver.com/item/sise_day.naver returns 410 since 2026-09; use the chart API instead.
+    response = requests.get(
+        "https://api.finance.naver.com/siseJson.naver",
+        params={
+            "symbol": stock_code,
+            "requestType": 1,
+            "startTime": start_date.replace("-", ""),
+            "endTime": end_date.replace("-", ""),
+            "timeframe": "day",
+        },
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=30,
+    )
+    response.raise_for_status()
+    # Body is a JS array literal: header row (single-quoted) followed by
+    # ["YYYYMMDD", open, high, low, close, volume, foreign_ratio] rows.
+    table = ast.literal_eval(response.text.strip())
 
     rows: list[dict] = []
-    seen_dates: set[str] = set()
-
-    for page in range(1, max_pages + 1):
-        response = session.get(
-            "https://finance.naver.com/item/sise_day.naver",
-            params={"code": stock_code, "page": page},
-            timeout=30,
-        )
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "lxml")
-        table_rows = soup.select("table.type2 tr")
-        if not table_rows:
-            break
-
-        page_added = 0
-        stop = False
-        for tr in table_rows:
-            cells = [cell.get_text(" ", strip=True) for cell in tr.select("td")]
-            if len(cells) != 7:
-                continue
-
-            date_text = cells[0].replace(".", "-")
-            try:
-                row_date = datetime.strptime(date_text, "%Y-%m-%d").date()
-            except ValueError:
-                continue
-
-            if row_date < start_dt:
-                stop = True
-                continue
-            if row_date > end_dt:
-                continue
-            if date_text in seen_dates:
-                continue
-
-            rows.append(
-                {
-                    "date": date_text,
-                    "close": int(cells[1].replace(",", "")),
-                }
-            )
-            seen_dates.add(date_text)
-            page_added += 1
-
-        if stop and page_added == 0:
-            break
+    for record in table[1:]:
+        date_text = datetime.strptime(str(record[0]), "%Y%m%d").strftime("%Y-%m-%d")
+        rows.append({"date": date_text, "close": int(record[4])})
 
     rows.sort(key=lambda item: item["date"])
     return rows
